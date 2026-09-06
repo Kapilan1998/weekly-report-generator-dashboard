@@ -16,11 +16,12 @@ submit/review/correction cycle, plus a manager analytics dashboard.
 
 ## Current status
 
-`docs/PLAN.md` Phases 1 and 2 (backend auth/RBAC, and the report domain + review
-workflow) are done, on branch `feature/auth-rba` (not yet merged to `main`). No frontend
-code exists yet — that's Phase 4. Don't assume any endpoint or component mentioned in the
-docs actually exists until you've checked the code; `docs/PLAN.md` is the authoritative
-done/not-done state per item.
+`docs/PLAN.md` Phases 1, 2 and 4 are done: backend auth/RBAC, the report domain + review
+workflow (both merged to `main`), and the frontend foundation (on branch
+`feature/frontend-foundation`). Phase 3 (project CRUD + dashboard aggregate endpoints) and
+Phases 5-6 (the remaining report and manager pages) are not started. Don't assume any
+endpoint or component mentioned in the docs actually exists until you've checked the code;
+`docs/PLAN.md` is the authoritative done/not-done state per item.
 
 **Read `docs/PHASE2_SPEC.md` before touching the report/review code.** It is the
 authoritative spec for the schema, endpoints, status codes and lifecycle, and it records
@@ -58,8 +59,10 @@ worth remembering before assuming an old Spring Boot 3.x pattern still applies:
 ## Tech stack (decided)
 
 - **Backend:** Spring Boot 4.1.1, Java 21, Maven — `backend/weekly-report-backend/`
-- **Frontend:** React + Vite + TypeScript (`.tsx`, not `.jsx`) + Tailwind CSS —
-  `frontend/` (not yet scaffolded)
+- **Frontend:** React 19 + Vite 8 + TypeScript + Tailwind **4** + React Router **7** —
+  `frontend/`. Read `frontend/README.md` before working there: Tailwind 4 is configured from
+  CSS (no `tailwind.config.js`, no PostCSS), and `erasableSyntaxOnly` means no TS `enum`s,
+  so backend enums are string-literal unions in `src/types/api.ts`.
 - **Database:** MySQL, schema managed via **Flyway** migrations under
   `backend/weekly-report-backend/src/main/resources/db/migration/`
   (`V1__create_users_table.sql`, `V2__create_reports_schema.sql`; add one migration per
