@@ -9,11 +9,30 @@ interface PaginationProps {
   onChange: (page: number) => void
 }
 
+type PageItem = number | 'gap'
+
 /**
- * Footer bar for the paginated list endpoints. Page numbers are zero-based here because the
- * backend is (`spring.data.web.pageable.one-indexed-parameters=false`); only the label
- * shown to the user is +1.
+ * Which page numbers to render: always the first and last, plus a window around the
+ * current page, with gaps collapsed to an ellipsis. Without this the control would grow a
+ * button per page and overflow once the data set is any size.
  */
+function pageItems(current: number, total: number): PageItem[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, index) => index)
+  }
+
+  const items: PageItem[] = [0]
+  const start = Math.max(1, current - 1)
+  const end = Math.min(total - 2, current + 1)
+
+  if (start > 1) items.push('gap')
+  for (let index = start; index <= end; index++) items.push(index)
+  if (end < total - 2) items.push('gap')
+
+  items.push(total - 1)
+  return items
+}
+
 export function Pagination({
   page,
   size,
@@ -26,8 +45,8 @@ export function Pagination({
   const from = totalElements === 0 ? 0 : page * size + 1
   const to = Math.min((page + 1) * size, totalElements)
 
-  const buttonClass =
-    'rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-300 ring-1 ring-inset ring-white/10 transition hover:bg-white/5 hover:text-ink-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-300'
+  const stepClass =
+    'inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-orange-200 ring-1 ring-inset ring-orange-400/30 transition hover:bg-orange-500/15 hover:text-orange-100 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent'
 
   return (
     <nav
@@ -42,25 +61,62 @@ export function Pagination({
 
       {/* A single page needs no controls, but the count above is still useful. */}
       {totalPages > 1 && (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onChange(page - 1)}
-            disabled={first}
-            className={buttonClass}
-          >
-            Previous
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => onChange(page - 1)} disabled={first} className={stepClass}>
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden="true"
+              className="size-3.5"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5l-5 5 5 5" />
+            </svg>
+            <span className="hidden sm:inline">Previous</span>
           </button>
-          <span className="text-xs text-ink-500">
-            Page <span className="font-medium text-ink-300">{page + 1}</span> of {totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => onChange(page + 1)}
-            disabled={last}
-            className={buttonClass}
-          >
-            Next
+
+          <div className="flex items-center gap-1">
+            {pageItems(page, totalPages).map((item, index) =>
+              item === 'gap' ? (
+                <span
+                  key={`gap-${index}`}
+                  aria-hidden="true"
+                  className="px-1 text-xs text-ink-500"
+                >
+                  …
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => onChange(item)}
+                  aria-label={`Go to page ${item + 1}`}
+                  aria-current={item === page ? 'page' : undefined}
+                  className={`grid size-8 place-items-center rounded-lg text-xs font-semibold transition ${
+                    item === page
+                      ? 'bg-orange-500 text-white shadow-lg shadow-orange-950/40'
+                      : 'text-orange-200 ring-1 ring-inset ring-orange-400/30 hover:bg-orange-500/15 hover:text-orange-100'
+                  }`}
+                >
+                  {item + 1}
+                </button>
+              ),
+            )}
+          </div>
+
+          <button type="button" onClick={() => onChange(page + 1)} disabled={last} className={stepClass}>
+            <span className="hidden sm:inline">Next</span>
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden="true"
+              className="size-3.5"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="m8 5 5 5-5 5" />
+            </svg>
           </button>
         </div>
       )}
