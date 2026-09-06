@@ -1,9 +1,7 @@
 package com.technical.task.weeklyreportbackend.dto;
 
-import com.technical.task.weeklyreportbackend.domain.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -23,9 +21,6 @@ public record RegisterRequest(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
                 message = "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
         )
-        String password,
-
-        @NotNull(message = "Role is required")
-        Role role
+        String password
 ) {
 }
