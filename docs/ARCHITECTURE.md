@@ -118,12 +118,21 @@ Key decisions:
    the stateless design. (Token expiry + optional refresh flow noted as a possible
    future improvement, not required for this assignment.)
 
+## Decided: `Role` model
+
+The assignment's "Required roles" list names exactly two: **Team Member** and
+**Manager / Admin** — the `/` is one role referred to by either name, not two separate
+roles. The other "admin" mentions in the PDF (role assignment "by an admin", and the
+"(admin)" tag on the user-management page) just describe that same role doing an
+admin-flavored task, not a distinct permission tier.
+
+**Decision: two roles total — `TEAM_MEMBER` and `MANAGER`.** `MANAGER` also has access
+to the user-management page (invite/remove team members, assign roles). No separate
+`ADMIN` role — introducing one would be extra scope beyond what's asked, not a
+requirement.
+
 ## Open questions / things to confirm before or during implementation
 
-- Exact `Role` model: a single `MANAGER` role that also covers "Admin" user-management
-  duties (simplest, matches the assignment's "Manager / Admin" phrasing), vs. a
-  separate `ADMIN` role. Default plan: **one `MANAGER` role** that can also access the
-  user-management page, unless you'd rather split it.
 - Charting library: default plan is **Recharts** (simple, React-idiomatic); ECharts is
   the alternative if you want more chart variety.
 - Whether the AI Chat Assistant bonus gets attempted, and if so which LLM/integration

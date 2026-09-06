@@ -132,9 +132,9 @@ which version a given comment was made against.
   for `TEAM_MEMBER` callers; `MANAGER` callers may query across all users. This is
   enforced in the service layer, not just at the controller/role level.
 
-## Role model decision (see also `docs/ARCHITECTURE.md` open questions)
+## Role model (decided)
 
-Default plan: a single `Role` enum with `TEAM_MEMBER` and `MANAGER` — `MANAGER` also
-covers the "Admin" user-management page, since the assignment repeatedly writes
-"Manager / Admin" as one bucket. If you'd rather split `MANAGER` and `ADMIN` into two
-roles later, the schema change is additive (widen the enum, no structural change).
+`Role` enum: `TEAM_MEMBER`, `MANAGER`. The assignment's "Required roles" list names
+exactly these two ("Manager / Admin" is one role, not two) — see `docs/ARCHITECTURE.md`
+for the full reasoning. `MANAGER` also covers the user-management page (invite/remove
+team members, assign roles). No `ADMIN` role.
