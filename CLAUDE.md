@@ -16,10 +16,37 @@ submit/review/correction cycle, plus a manager analytics dashboard.
 
 ## Current status
 
-Planning/scaffolding stage only. `docs/PLAN.md` Phase 0 is in progress. No frontend
-code exists yet, no Flyway migrations exist yet, no report/auth backend logic exists
-yet beyond the initial Spring Boot skeleton. Don't assume any endpoint or component
-mentioned in the docs actually exists until you've checked the code.
+`docs/PLAN.md` Phase 1 (backend auth/RBAC) is done, on branch `feature/auth-rba`
+(not yet merged to `main`). Phase 0 is otherwise still in progress — no frontend code
+exists yet. Don't assume any endpoint or component mentioned in the docs actually
+exists until you've checked the code; check `docs/PLAN.md` for the authoritative
+done/not-done state per item.
+
+## Spring Boot 4.x gotchas (this project uses 4.1.1 — newer than most training data)
+
+Spring Boot 4 split what used to be one big `spring-boot-autoconfigure` jar into many
+small per-feature modules, and moved to Jackson 3. Two things this broke in Phase 1,
+worth remembering before assuming an old Spring Boot 3.x pattern still applies:
+
+- **Flyway needs an extra dependency.** `org.flywaydb:flyway-core` alone does NOT pull
+  in Flyway's Spring Boot integration anymore — you also need
+  `org.springframework.boot:spring-boot-flyway` (contains
+  `org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration`). Without it,
+  migrations silently never run (no error, no Flyway log lines at all — Hibernate just
+  fails validation with "missing table"). Same pattern likely applies to other
+  integrations added later (check for a matching `spring-boot-<feature>` module before
+  assuming a plain third-party starter dependency is enough).
+- **Jackson is "Jackson 3" here, not classic Jackson 2.** The `ObjectMapper` Spring MVC
+  actually uses is `tools.jackson.databind.ObjectMapper` (groupId `tools.jackson.core`),
+  not `com.fasterxml.jackson.databind.ObjectMapper`. The old `com.fasterxml.jackson.*`
+  classes may still be on the classpath transitively (e.g. via `jjwt-jackson`) but only
+  at `runtime` scope — importing them in application code compiles-fails. If you need to
+  build/serialize JSON manually anywhere (e.g. a custom `AuthenticationEntryPoint` or
+  exception handler), use the `tools.jackson.databind` package.
+- Before assuming any other Spring Boot integration "just works" the old way, check
+  `~/.m2/repository/org/springframework/boot/` for a same-named module, or just try
+  running the app — errors here tend to be either a loud startup failure (missing
+  bean/table) or a compile error, not a silent behavior change.
 
 ## Tech stack (decided)
 

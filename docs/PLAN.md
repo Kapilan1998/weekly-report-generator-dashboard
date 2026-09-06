@@ -8,20 +8,28 @@ started) — this file is the source of truth for "what's left" across sessions.
 - [x] MySQL connectivity configured (`spring.datasource.*` in `application.properties`)
 - [ ] `frontend/` scaffolded with Vite + React + TypeScript + Tailwind
       (`npm create vite@latest . -- --template react-ts`, then add Tailwind)
-- [ ] Add Flyway dependency to backend `pom.xml`; disable
-      `spring.jpa.hibernate.ddl-auto` in favor of migrations (or set it to `validate`)
-- [ ] `V1__init_schema.sql` Flyway migration matching `docs/DATA_MODEL.md`
+- [x] Add Flyway dependency to backend `pom.xml`; `spring.jpa.hibernate.ddl-auto` set to
+      `validate` (schema now owned by migrations)
+- [x] `V1__create_users_table.sql` Flyway migration (users table only so far — more
+      tables land per phase as their entities are added)
 - [ ] Root `README.md` setup instructions filled in and verified to actually work end
       to end (install → run frontend → run backend → run database)
 
-## Phase 1 — Backend: Auth & RBAC
-- [ ] `User` entity + repository, `Role` enum (`TEAM_MEMBER`, `MANAGER`)
-- [ ] Spring Security config: stateless session, JWT filter, password hashing (BCrypt)
-- [ ] `JwtService` (issue + parse/validate tokens)
-- [ ] `POST /api/auth/register`, `POST /api/auth/login`
-- [ ] `@PreAuthorize` role checks wired on a couple of trivial endpoints to prove the
-      setup works end to end before building on top of it
-- [ ] Global exception handler (`@ControllerAdvice`) for validation errors, 401/403, etc.
+## Phase 1 — Backend: Auth & RBAC ✅ done (branch `feature/auth-rba`)
+- [x] `User` entity + repository, `Role` enum (`TEAM_MEMBER`, `MANAGER`)
+- [x] Spring Security config: stateless session, JWT filter, password hashing (BCrypt)
+- [x] `JwtService` (issue + parse/validate tokens)
+- [x] `POST /api/auth/register`, `POST /api/auth/login`
+- [x] `@PreAuthorize` role checks wired on `/api/ping/me` and `/api/ping/manager` —
+      verified end to end: team member gets 200 on `/me`, 403 on `/manager`; manager
+      gets 200 on both; no/garbage token gets 401 on either
+- [x] Global exception handler (`@RestControllerAdvice`) for validation errors (400 +
+      field errors), auth failures (401), access denied (403), and a custom
+      `RestAuthenticationEntryPoint` so an unauthenticated request returns 401 (not
+      Spring Security's default bare 403)
+
+**Gotchas hit during Phase 1 (worth knowing before touching security/JSON code again):**
+see the "Spring Boot 4.x gotchas" note in `CLAUDE.md`.
 
 ## Phase 2 — Backend: Reports core + workflow
 - [ ] `Project`, `Report`, `ReportVersion`, `TaskEntry`, `Blocker`, `Achievement`,
