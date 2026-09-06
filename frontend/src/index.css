@@ -1,0 +1,126 @@
+/* Tailwind v4 is configured from CSS - there is no tailwind.config.js and no PostCSS step;
+   the @tailwindcss/vite plugin in vite.config.ts does the work. */
+@import 'tailwindcss';
+
+@theme {
+  /* Surfaces: a genuinely blue navy, not neutral grey. Every large area uses one of these,
+     so the UI has no bright regions at all. */
+  --color-navy-950: #070c16; /* sidebar */
+  --color-navy-900: #0b1220; /* page background */
+  --color-navy-850: #0f1728;
+  --color-navy-800: #131c31; /* cards */
+  --color-navy-700: #1a2440; /* table headers, raised rows */
+  --color-navy-600: #24314f; /* borders */
+  --color-navy-500: #33415f; /* dividers, scrollbar thumb */
+
+  /* Text, tinted slightly blue so it sits in the same family as the surfaces. */
+  --color-ink-100: #e7edfb;
+  --color-ink-300: #aebbd6;
+  --color-ink-500: #7f8dae;
+
+  /* Brand: indigo reads well on navy and stays clear of the status hues. */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-brand-950: #1e1b4b;
+
+  --animate-fade-up: fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-fade-in: fade-in 0.25s ease-out both;
+  --animate-drawer-in: drawer-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-glow-drift: glow-drift 16s ease-in-out infinite;
+  --animate-menu-in: menu-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Only transform and opacity are animated, so these run on the compositor and never
+   trigger layout or paint. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes glow-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(5%, -4%, 0) scale(1.1);
+  }
+}
+
+html {
+  /* Tells the browser to render native controls - select popups, scrollbars, form widgets -
+     in dark. Without this the status dropdown and scrollbars stay bright white. */
+  color-scheme: dark;
+  /* Set here as well as on body so there is no white flash before the CSS is applied. */
+  background-color: var(--color-navy-900);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-navy-900 text-ink-100 antialiased;
+  scrollbar-color: var(--color-navy-500) transparent;
+}
+
+::selection {
+  background-color: color-mix(in oklab, var(--color-brand-500) 45%, transparent);
+}
+
+/* Respect the OS "reduce motion" setting: transitions become instant rather than absent,
+   so nothing depends on an animation having run. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
