@@ -6,14 +6,16 @@ started) — this file is the source of truth for "what's left" across sessions.
 ## Phase 0 — Foundations (partially done)
 - [x] Backend project created (Spring Boot 4.1.1, Java 21, `backend/weekly-report-backend`)
 - [x] MySQL connectivity configured (`spring.datasource.*` in `application.properties`)
-- [ ] `frontend/` scaffolded with Vite + React + TypeScript + Tailwind
-      (`npm create vite@latest . -- --template react-ts`, then add Tailwind)
+- [x] `frontend/` scaffolded with Vite + React + TypeScript + Tailwind. Note the installed
+      majors: **Tailwind 4** (CSS-first — no `tailwind.config.js`, no PostCSS step, the
+      `@tailwindcss/vite` plugin does it) and **React Router 7**. `tsconfig.app.json` sets
+      `erasableSyntaxOnly`, so there are no TS `enum`s — see `frontend/README.md`.
 - [x] Add Flyway dependency to backend `pom.xml`; `spring.jpa.hibernate.ddl-auto` set to
       `validate` (schema now owned by migrations)
 - [x] `V1__create_users_table.sql` Flyway migration (users table only so far — more
       tables land per phase as their entities are added)
-- [ ] Root `README.md` setup instructions filled in and verified to actually work end
-      to end (install → run frontend → run backend → run database)
+- [x] Root `README.md` setup instructions filled in and verified end to end (install → run
+      database → run backend → run frontend), against a real MySQL and a real browser
 
 ## Phase 1 — Backend: Auth & RBAC ✅ done (branch `feature/auth-rba`)
 - [x] `User` entity + repository, `Role` enum (`TEAM_MEMBER`, `MANAGER`)
@@ -79,12 +81,24 @@ a `TEAM_MEMBER`; manager accounts come from seed data and the Phase 3 admin endp
 - [ ] Chart-data endpoints: tasks-completed trend, status-by-team-member, workload by
       project, hours by task type, recent activity feed
 
-## Phase 4 — Frontend: foundation
-- [ ] Vite + TS + Tailwind scaffold running (`npm run dev`)
-- [ ] Routing (`react-router`), `ProtectedRoute` by role
-- [ ] `AuthContext` + login/register pages wired to backend
-- [ ] `api/` client with JWT attach + 401 handling (redirect to login)
-- [ ] Base layout/nav shared across pages, responsive
+## Phase 4 — Frontend: foundation ✅ done (branch `feature/frontend-foundation`)
+- [x] Vite + TS + Tailwind scaffold running (`npm run dev` on 5173, `/api` proxied to 8080
+      so dev is same-origin and CORS never comes up)
+- [x] Routing (React Router 7), `ProtectedRoute` by auth and by role
+- [x] `AuthProvider` + `useAuth`, login/register pages wired to the backend, token
+      persisted so a refresh doesn't sign you out
+- [x] `api/` client: single fetch wrapper, JWT attach, backend error shape unwrapped into a
+      typed `ApiError` (incl. `fieldErrors`), one 401 handler that signs the user out
+- [x] Base layout with role-aware nav, responsive (mobile nav toggle, tables scroll in their
+      own container)
+- [x] `src/types/api.ts` — TypeScript mirror of the backend DTOs, kept in sync by hand
+- [x] Two pages reading real backend data to prove the chain end to end: my-reports list and
+      the manager team dashboard with a status filter
+
+Verified in a browser: unauthenticated redirect, login, register (incl. client-side
+validation), token persistence across reload, role-aware nav, a team member being bounced
+off `/team`, the manager list + filter, bad-credentials error display, mobile layout. Zero
+console errors, zero lint warnings, clean `tsc -b` build.
 
 ## Phase 5 — Frontend: report pages
 - [ ] Personal weekly report page (create/edit) — matches the fixed field structure,
