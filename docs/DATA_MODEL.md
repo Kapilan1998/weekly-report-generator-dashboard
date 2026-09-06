@@ -1,17 +1,26 @@
 # Data Model
 
-Status: **planned, not yet implemented**. This is the working draft for the ER diagram
-deliverable (Section 3 of the assignment) — export an actual diagram image from this
-once it stabilizes (e.g. via dbdiagram.io, drawio, or a Mermaid render) and save it
-under `docs/diagrams/`.
+Status: **implemented as of Phase 2.**
+
+> **`docs/PHASE2_SPEC.md` is the authoritative reference** for the exact tables, column
+> types, and lifecycle rules — it is what the code and the `V2__create_reports_schema.sql`
+> migration were built from, and it resolves several points this file left open. Read that
+> first; this file is the conceptual overview and the basis for the ER diagram deliverable.
+
+Export a diagram image from this (dbdiagram.io, drawio, or a Mermaid render) and save it
+under `docs/diagrams/` for the assignment's ER-diagram deliverable. Note the shape below
+differs from the shipped schema in two ways, both deliberate:
+- `PROJECT_MEMBER` is **not implemented** — assigning members to projects is optional in the
+  brief and is deferred to Phase 3. Drop it from the exported diagram, or implement it
+  first; the graded diagram must not show a table the database doesn't have.
+- `REPORT` has **no `current_version_id`** column. The current version is the highest
+  `version_number`, which avoids a circular FK between `reports` and `report_versions`.
 
 ## Entity-relationship overview
 
 ```mermaid
 erDiagram
     USER ||--o{ REPORT : owns
-    USER ||--o{ PROJECT_MEMBER : "assigned via"
-    PROJECT ||--o{ PROJECT_MEMBER : "assigned via"
     PROJECT ||--o{ REPORT : "tagged on"
     REPORT ||--|{ REPORT_VERSION : "has versions"
     REPORT_VERSION ||--o{ TASK_ENTRY : contains
@@ -31,14 +40,10 @@ erDiagram
     }
     PROJECT {
         bigint id PK
-        varchar name
+        varchar name UK
         varchar description
+        bit active
         datetime created_at
-    }
-    PROJECT_MEMBER {
-        bigint id PK
-        bigint user_id FK
-        bigint project_id FK
     }
     REPORT {
         bigint id PK
@@ -47,7 +52,7 @@ erDiagram
         date week_start
         date week_end
         enum status "DRAFT | SUBMITTED | NEEDS_CORRECTION | APPROVED"
-        bigint current_version_id FK
+        datetime last_submitted_at
         datetime created_at
         datetime updated_at
     }
@@ -55,10 +60,12 @@ erDiagram
         bigint id PK
         bigint report_id FK
         int version_number
-        text tasks_planned_next_week
-        text notes
+        varchar tasks_planned_next_week
+        varchar notes
         varchar links
         datetime submitted_at
+        datetime created_at
+        datetime updated_at
     }
     TASK_ENTRY {
         bigint id PK
@@ -94,8 +101,8 @@ erDiagram
         bigint id PK
         bigint report_version_id FK
         bigint reviewer_id FK
-        enum action "APPROVED | REQUEST_CHANGES"
-        text comment
+        enum action "APPROVE | REQUEST_CHANGES"
+        varchar comment
         datetime created_at
     }
 ```
@@ -107,20 +114,25 @@ resubmitted`, the **previous content stays visible**, and a manager must be able
 which version a given comment was made against.
 
 - `REPORT` is the stable identity for "this user's report for this week" — it holds the
-  current `status` and a pointer to the `current_version_id`.
-- Every submit (including every resubmit after correction) creates a new
-  `REPORT_VERSION` row — a full snapshot of that submission's content (tasks, blockers,
-  achievements, hours, planned-next-week, notes). Nothing is overwritten in place.
+  `status` and the week. The current version is the highest `version_number`; there is no
+  pointer column, which keeps `reports` and `report_versions` free of a circular FK.
+- `submitted_at IS NULL` marks the one open working copy; a non-null value marks a frozen
+  snapshot that **no code path ever writes again**.
+- **Lazy fork** (as implemented): draft edits mutate the open version in place, submit
+  freezes it, request-changes creates no version at all, and the owner's first edit *after*
+  a freeze forks version `n+1` populated from that request. So a draft edited ten times is
+  still one version, and a full correction cycle produces exactly two.
 - `TASK_ENTRY`, `BLOCKER`, `ACHIEVEMENT`, `HOURS_ENTRY` all hang off a specific
   `REPORT_VERSION`, not the `REPORT` — so old versions keep their exact original rows
   even after a new version is created.
 - `REVIEW_COMMENT` also hangs off a specific `REPORT_VERSION`, which directly answers
   "which version was this comment made against."
-- Draft edits (before first submit) can update the single not-yet-submitted version in
-  place, or always create version 1 on first save — a small implementation choice to
-  make during Phase 2 (see `docs/PLAN.md`); the simplest option is: **draft = version 0,
-  mutated in place; every actual "Submit" click snapshots/finalizes a version and starts
-  the next one on the next edit**.
+
+Why lazy rather than forking eagerly when the manager requests changes: it keeps the
+manager's entire write surface to inserting a review comment and updating the report's
+status, so "managers cannot rewrite report content" holds structurally rather than by
+convention. It also removes any deep-copy step, since the new version is populated from the
+incoming payload. See `docs/PHASE2_SPEC.md`.
 
 ## RBAC notes reflected in the schema
 

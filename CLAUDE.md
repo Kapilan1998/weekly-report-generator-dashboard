@@ -16,11 +16,18 @@ submit/review/correction cycle, plus a manager analytics dashboard.
 
 ## Current status
 
-`docs/PLAN.md` Phase 1 (backend auth/RBAC) is done, on branch `feature/auth-rba`
-(not yet merged to `main`). Phase 0 is otherwise still in progress — no frontend code
-exists yet. Don't assume any endpoint or component mentioned in the docs actually
-exists until you've checked the code; check `docs/PLAN.md` for the authoritative
+`docs/PLAN.md` Phases 1 and 2 (backend auth/RBAC, and the report domain + review
+workflow) are done, on branch `feature/auth-rba` (not yet merged to `main`). No frontend
+code exists yet — that's Phase 4. Don't assume any endpoint or component mentioned in the
+docs actually exists until you've checked the code; `docs/PLAN.md` is the authoritative
 done/not-done state per item.
+
+**Read `docs/PHASE2_SPEC.md` before touching the report/review code.** It is the
+authoritative spec for the schema, endpoints, status codes and lifecycle, and it records
+*why* each decision was made — several of them are non-obvious and were chosen over
+plausible alternatives for specific reasons (lazy version forking, 404 for a peer's report,
+pessimistic locking on the edit path, no denormalized aggregates). Where it disagrees with
+`docs/DATA_MODEL.md`, it wins.
 
 ## Spring Boot 4.x gotchas (this project uses 4.1.1 — newer than most training data)
 
@@ -54,8 +61,12 @@ worth remembering before assuming an old Spring Boot 3.x pattern still applies:
 - **Frontend:** React + Vite + TypeScript (`.tsx`, not `.jsx`) + Tailwind CSS —
   `frontend/` (not yet scaffolded)
 - **Database:** MySQL, schema managed via **Flyway** migrations under
-  `backend/weekly-report-backend/src/main/resources/db/migration/` (not yet added —
-  currently only `spring.datasource.*` connection properties exist)
+  `backend/weekly-report-backend/src/main/resources/db/migration/`
+  (`V1__create_users_table.sql`, `V2__create_reports_schema.sql`; add one migration per
+  phase as new entities are introduced). `ddl-auto=validate`, so a migration and its
+  entities must match exactly — see the column table in `docs/PHASE2_SPEC.md` for the type
+  choices that matter (DATE vs DATETIME(6), BIT(1) for booleans, VARCHAR(20) for enums) and
+  keep every `@Size(max)` equal to its `@Column(length)` and its DDL length.
 - **Auth:** JWT (stateless) — backend issues on login, frontend sends as
   `Authorization: Bearer <token>`
 - No separate top-level `database/` folder — see `docs/ARCHITECTURE.md` for why.
@@ -79,6 +90,13 @@ Sisenco-Digital/
 
 ## Conventions & working preferences
 
+- **Dependency injection:** use `@RequiredArgsConstructor` (Lombok) on every
+  `@Service`/`@Component`/`@RestController`/`@Configuration` class that only needs
+  plain constructor injection of `final` fields — don't hand-write the constructor.
+  The one exception is a class that needs real logic in its constructor beyond field
+  assignment (e.g. `JwtService`, which takes `@Value`-annotated primitives and builds a
+  `SecretKey`) — those keep an explicit constructor since Lombok can't express that.
+  Never use field injection (`@Autowired` on a field).
 - **Git workflow:** default branch is `main`. **Do not commit or push unless the user
   explicitly asks in that message** — this user consistently wants to review changes
   and commit/push themselves. Staging/committing on request is fine; pushing without

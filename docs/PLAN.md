@@ -31,20 +31,45 @@ started) — this file is the source of truth for "what's left" across sessions.
 **Gotchas hit during Phase 1 (worth knowing before touching security/JSON code again):**
 see the "Spring Boot 4.x gotchas" note in `CLAUDE.md`.
 
-## Phase 2 — Backend: Reports core + workflow
-- [ ] `Project`, `Report`, `ReportVersion`, `TaskEntry`, `Blocker`, `Achievement`,
-      `HoursEntry`, `ReviewComment` entities + repositories
-- [ ] `POST /api/reports` (create draft), `PUT /api/reports/{id}` (edit while
+## Phase 2 — Backend: Reports core + workflow ✅ done (branch `feature/auth-rba`)
+
+Authoritative spec: **`docs/PHASE2_SPEC.md`** (schema, endpoints, status codes, and the
+reasoning behind each decision). Verified by an 88-check end-to-end run covering the whole
+cycle and the RBAC matrix.
+
+- [x] `Project`, `Report`, `ReportVersion`, `TaskEntry`, `Blocker`, `Achievement`,
+      `HoursEntry`, `ReviewComment` entities + repositories, and
+      `V2__create_reports_schema.sql` (seeds 5 projects so the API is reachable end to end)
+- [x] `POST /api/reports` (create draft), `PUT /api/reports/{id}` (edit while
       Draft/Needs Correction), `POST /api/reports/{id}/submit`
-- [ ] `GET /api/reports/mine` (own history, paginated)
-- [ ] `GET /api/reports/{id}` (detail; ownership or manager check)
-- [ ] `GET /api/reports/{id}/versions` (past versions list)
-- [ ] Manager actions: `POST /api/reports/{id}/approve`,
+- [x] `GET /api/reports/mine` (own history, paginated)
+- [x] `GET /api/reports/{id}` (detail; owner sees their working copy, manager sees the
+      latest submitted version and is refused another user's draft)
+- [x] `GET /api/reports/{id}/versions` and `GET /api/reports/{id}/versions/{n}`
+      (submitted snapshots only, each with the reviews made against it)
+- [x] Manager actions: `POST /api/reports/{id}/approve`,
       `POST /api/reports/{id}/request-changes` (body: comment)
-- [ ] `GET /api/reports` (manager-wide list) with pagination + filters: team member,
-      project, date range, status
-- [ ] Service-layer ownership enforcement (team member can only touch their own
-      reports; manager can only touch status/comment, never version content)
+- [x] `GET /api/reports` (manager-wide list) with pagination + filters: team member,
+      project, exact week, date range, status (repeatable)
+- [x] `GET /api/reports/week-status?weekStart=` — one row per user including
+      **not yet started**, the fifth value in the brief's status filter, which is the
+      absence of a report row and so cannot be a status value
+- [x] `GET /api/projects` (read-only; full CRUD is Phase 3) — needed for the report form
+- [x] Service-layer ownership enforcement (`ReportAccessGuard`): a team member can only
+      touch their own reports; a manager can only write status/comment, never version
+      content; ownership is checked before workflow state so the state check can't be used
+      as an existence oracle
+- [x] Pessimistic row lock on all five mutating paths, so an edit and a submit cannot
+      interleave and leave a frozen version whose children changed after submission
+- [x] Sort-property whitelist on both list endpoints (`?sort=user.passwordHash` → 400)
+- [x] `GlobalExceptionHandler` extended: type mismatch → 400, unreadable body → 400,
+      data integrity → 409, unmapped path → 404, catch-all → 500, all with fixed messages
+      that never echo driver text or caller input
+
+**Fixed a Phase 1 privilege escalation while here:** `POST /api/auth/register` accepted a
+client-chosen `role`, so anyone could mint a MANAGER account against a `permitAll`
+endpoint and walk through every `hasRole('MANAGER')` gate. Registration now always creates
+a `TEAM_MEMBER`; manager accounts come from seed data and the Phase 3 admin endpoint.
 
 ## Phase 3 — Backend: Projects & dashboard aggregates
 - [ ] `Project` CRUD endpoints (`GET/POST/PUT/DELETE /api/projects`)
@@ -91,6 +116,15 @@ see the "Spring Boot 4.x gotchas" note in `CLAUDE.md`.
 - [ ] At least one automated test proving RBAC: a team member's request for another
       team member's report is rejected; a non-manager hitting a manager-only endpoint
       is rejected
+- [ ] Port the Phase 2 end-to-end/RBAC checks into JUnit. They currently exist as a shell
+      suite driven with curl (88 checks, all passing) which proved the behaviour but is not
+      part of the build. Worth also asserting: register with `role=MANAGER` yields a
+      TEAM_MEMBER; a peer's *approved* report still returns 404 (pins guard ordering); v1's
+      child rows are unchanged after a full correction cycle.
+- [ ] Decide the test database before writing these: `BIT(1)` defaults, MySQL `CHECK`
+      constraints and `ddl-auto=validate` + Flyway mean the real V2 migration runs in any
+      `@SpringBootTest` context, so H2 is not a drop-in. Testcontainers MySQL or a
+      dedicated local test schema.
 
 ## Phase 9 — Bonus (optional, do last)
 - [ ] AI Chat Assistant (LLM choice + integration approach TBD — document prompt design
