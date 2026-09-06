@@ -42,7 +42,10 @@ analytics dashboard across the team.
 - Team members see/edit only their own reports. Managers see everyone's reports but can
   only edit status/comment, never the report content itself.
 - Bonus: history of past review comments (not just latest).
-- **Report version history** (bonus but effectively required for full credit): each
+- **Report version history** — a hard requirement, not a bonus. The PDF's "Bonus (not
+  required)" sentence applies only to keeping a *history of review comments*; the
+  version-history paragraph that follows it is separate and says the previous version's
+  content "must remain visible". Each
   correction cycle keeps the previous version's content visible, not overwritten.
   Manager must be able to see each past version alongside the version under review, and
   which version a comment was made against. A simple list of past versions with
