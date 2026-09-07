@@ -73,13 +73,37 @@ client-chosen `role`, so anyone could mint a MANAGER account against a `permitAl
 endpoint and walk through every `hasRole('MANAGER')` gate. Registration now always creates
 a `TEAM_MEMBER`; manager accounts come from seed data and the Phase 3 admin endpoint.
 
-## Phase 3 — Backend: Projects & dashboard aggregates
-- [ ] `Project` CRUD endpoints (`GET/POST/PUT/DELETE /api/projects`)
-- [ ] Optional: `ProjectMember` assignment endpoints
-- [ ] Dashboard summary endpoint(s): reports-submitted-this-week, compliance rate,
-      needs-correction count, open-blockers count
-- [ ] Chart-data endpoints: tasks-completed trend, status-by-team-member, workload by
-      project, hours by task type, recent activity feed
+## Phase 3 — Backend: Projects & dashboard aggregates ✅ done (branch `feature/dashboard-api`)
+
+No migration needed — `projects.active` already existed and "open blocker" is defined without
+a new column. See the "Dashboard aggregate rules" section of `docs/PHASE2_SPEC.md` for the
+definitions these endpoints settled.
+
+- [x] `Project` CRUD: `GET /api/projects` (any authenticated, active only — feeds the report
+      form), `GET /api/projects/all` (MANAGER, includes inactive + report counts),
+      `POST` / `PUT` / `DELETE` (MANAGER). Names are unique case-insensitively; a project any
+      report references cannot be deleted (409 naming the count) and is retired by setting
+      `active = false` instead
+- [~] `ProjectMember` assignment endpoints — **deliberately skipped.** Marked optional in both
+      the brief and this plan, and it was already removed from the ER diagram in Phase 2
+- [x] `GET /api/dashboard/summary?weekStart=` — team size, submitted / draft / not-started,
+      compliance %, reports currently needing correction, open blockers
+- [x] `GET /api/dashboard/charts?weekStart=&weeks=` — tasks-completed trend (zero-filled),
+      status by member (every user, including those with no reports), workload by project
+      (report count + hours), hours by task type (all five, in enum order)
+- [x] `GET /api/dashboard/activity?limit=` — submissions and review actions merged into one
+      reverse-chronological feed
+
+Verified with a 48-check suite: project CRUD incl. duplicate-name and delete-in-use rules,
+week normalisation, every RBAC gate (a team member gets 403 on all of it), and parameter
+bounds. **Also verified the current-version restriction**: the week holding a corrected report
+counts 2 completed tasks rather than 3, and its hours match v2 rather than v1+v2 — the bug
+that would have silently inflated every chart.
+
+Fixed while here: out-of-range or missing request parameters returned **500** instead of 400.
+`@Min`/`@Max` on a `@RequestParam` throws `ConstraintViolationException`, and a missing param
+throws `MissingServletRequestParameterException` — neither was handled, so the catch-all
+swallowed them. Both now return 400.
 
 ## Phase 4 — Frontend: foundation ✅ done (branch `feature/frontend-foundation`)
 - [x] Vite + TS + Tailwind scaffold running (`npm run dev` on 5173, `/api` proxied to 8080

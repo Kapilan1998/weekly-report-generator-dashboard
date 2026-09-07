@@ -20,11 +20,18 @@ submit/review/correction cycle, plus a manager analytics dashboard.
 review workflow, the frontend foundation (all merged to `main`), and the report pages
 (create/edit form, history, detail, version history — on branch `feature/report-pages`).
 
-Still to do: **Phase 3** (project CRUD + dashboard aggregate endpoints — a hard blocker for
-Phase 6's charts), **Phase 6** (manager review page, project and user management, dashboard
-tiles/charts), Phase 7 (seed data), Phase 8 (tests). Don't assume any endpoint or component
-mentioned in the docs actually exists until you've checked the code; `docs/PLAN.md` is the
-authoritative done/not-done state per item.
+Phase 3 (project CRUD + dashboard aggregate endpoints) is also done, on branch
+`feature/dashboard-api`.
+
+Still to do: **Phase 6** (manager review page, project and user management pages, dashboard
+tiles/charts — the backend it needs now exists), Phase 7 (seed data), Phase 8 (tests),
+Phase 10 (deliverables). Don't assume any endpoint or component mentioned in the docs
+actually exists until you've checked the code; `docs/PLAN.md` is the authoritative
+done/not-done state per item.
+
+**Any new aggregate query must restrict to each report's current version** — content hangs
+off a version, so a corrected report is otherwise counted twice. See "Dashboard aggregate
+rules" in `docs/PHASE2_SPEC.md`.
 
 **Frontend report-page conventions** (see the notes under Phase 5 in `docs/PLAN.md` for the
 reasoning): numeric form fields are held as strings and converted at serialise time; dynamic

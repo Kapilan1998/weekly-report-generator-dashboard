@@ -218,6 +218,29 @@ Consequence to carry into Phase 5: child row ids change on every save, so the Re
 must key rows by array index or a client-generated id, never by the server id, or every row
 remounts on save and loses focus.
 
+## Dashboard aggregate rules (settled in Phase 3)
+
+- **Every aggregate over report content is restricted to the report's current version**
+  (`versionNumber = max(versionNumber) for that report`). Tasks, blockers and hours hang off
+  a *version*, so without this a report that went through one correction cycle contributes
+  its content twice. Verified: the week holding a corrected report reports 2 completed tasks,
+  not 3.
+- **"Open blocker"** — the brief asks for "open blockers across the team" but blockers have no
+  `resolved` column, so it is defined as: *a blocker on the current version of a report whose
+  status is not `APPROVED`*. Approving a report closes its blockers along with it. Changing
+  this means changing `BlockerRepository.countOpen` and this line together.
+- **Compliance** is `submitted / teamSize` for the selected week, where "submitted" means
+  `lastSubmittedAt != null` (filed at least once, even if later sent back). The parts —
+  submitted / draft / not started — are returned separately so the UI can show them as the
+  brief words it, rather than re-deriving them from a percentage.
+- **`needsCorrection` and `openBlockers` are not week-scoped.** Both are current-state counts
+  ("reports *currently* in Needs Correction"), so filtering them by week would answer a
+  different question than the brief asks.
+- **A project cannot be deleted once any report references it** — that would strip the tag off
+  historical reports and rewrite a reviewed version's context. `DELETE` returns 409 naming the
+  report count; retiring such a project is done by setting `active = false`, which removes it
+  from the report form's options while leaving history intact.
+
 ## Other locked decisions
 
 - **Unknown JSON properties are rejected** (400). The PDF says users "should not be able to
