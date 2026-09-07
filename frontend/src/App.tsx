@@ -4,6 +4,8 @@ import { AuthPage } from './pages/AuthPage'
 import { MyReportsPage } from './pages/MyReportsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { ReportDetailPage } from './pages/ReportDetailPage'
+import { ReportFormPage } from './pages/ReportFormPage'
 import { TeamDashboardPage } from './pages/TeamDashboardPage'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 
@@ -26,6 +28,10 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<Navigate to="/reports" replace />} />
           <Route path="/reports" element={<MyReportsPage />} />
+          {/* Declared before /reports/:id so "new" is matched as a literal, not an id. */}
+          <Route path="/reports/new" element={<ReportFormPage />} />
+          <Route path="/reports/:id" element={<ReportDetailPage />} />
+          <Route path="/reports/:id/edit" element={<ReportFormPage />} />
           <Route path="/profile" element={<ProfilePage />} />
 
           {/* Manager-only. The backend enforces this too - this only decides what renders. */}
