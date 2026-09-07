@@ -19,4 +19,18 @@ public interface ReviewCommentRepository extends JpaRepository<ReviewComment, Lo
 
     @EntityGraph(attributePaths = {"reviewer", "reportVersion"})
     Optional<ReviewComment> findTopByReportVersionReportIdOrderByCreatedAtDescIdDesc(Long reportId);
+
+    /**
+     * Recent review actions for the dashboard activity feed. The graph reaches through to the
+     * report's owner and project because the feed renders all three, and lazy-loading them
+     * per row would be an N+1 with open-in-view disabled.
+     */
+    @EntityGraph(attributePaths = {
+            "reviewer",
+            "reportVersion",
+            "reportVersion.report",
+            "reportVersion.report.user",
+            "reportVersion.report.project"
+    })
+    List<ReviewComment> findTop20ByOrderByCreatedAtDescIdDesc();
 }
