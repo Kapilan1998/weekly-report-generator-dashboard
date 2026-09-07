@@ -80,6 +80,7 @@ export function RegisterForm() {
         <TextField
           label="Full name"
           name="name"
+          id="register-name"
           autoComplete="name"
           placeholder="Alex Morgan"
           required
@@ -90,6 +91,7 @@ export function RegisterForm() {
         <TextField
           label="Email"
           name="email"
+          id="register-email"
           type="email"
           autoComplete="email"
           placeholder="you@company.com"
@@ -101,6 +103,7 @@ export function RegisterForm() {
         <TextField
           label="Password"
           name="password"
+          id="register-password"
           type="password"
           autoComplete="new-password"
           placeholder="••••••••"

@@ -16,12 +16,20 @@ submit/review/correction cycle, plus a manager analytics dashboard.
 
 ## Current status
 
-`docs/PLAN.md` Phases 1, 2 and 4 are done: backend auth/RBAC, the report domain + review
-workflow (both merged to `main`), and the frontend foundation (on branch
-`feature/frontend-foundation`). Phase 3 (project CRUD + dashboard aggregate endpoints) and
-Phases 5-6 (the remaining report and manager pages) are not started. Don't assume any
-endpoint or component mentioned in the docs actually exists until you've checked the code;
-`docs/PLAN.md` is the authoritative done/not-done state per item.
+`docs/PLAN.md` Phases 1, 2, 4 and 5 are done: backend auth/RBAC, the report domain +
+review workflow, the frontend foundation (all merged to `main`), and the report pages
+(create/edit form, history, detail, version history — on branch `feature/report-pages`).
+
+Still to do: **Phase 3** (project CRUD + dashboard aggregate endpoints — a hard blocker for
+Phase 6's charts), **Phase 6** (manager review page, project and user management, dashboard
+tiles/charts), Phase 7 (seed data), Phase 8 (tests). Don't assume any endpoint or component
+mentioned in the docs actually exists until you've checked the code; `docs/PLAN.md` is the
+authoritative done/not-done state per item.
+
+**Frontend report-page conventions** (see the notes under Phase 5 in `docs/PLAN.md` for the
+reasoning): numeric form fields are held as strings and converted at serialise time; dynamic
+rows are keyed by a client-generated id, never a server child id; validation is split into
+structural rules and submit-only completeness rules.
 
 **Read `docs/PHASE2_SPEC.md` before touching the report/review code.** It is the
 authoritative spec for the schema, endpoints, status codes and lifecycle, and it records

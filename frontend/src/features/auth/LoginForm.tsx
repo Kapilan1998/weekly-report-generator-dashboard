@@ -55,6 +55,7 @@ export function LoginForm() {
         <TextField
           label="Email"
           name="email"
+          id="login-email"
           type="email"
           autoComplete="email"
           placeholder="you@company.com"
@@ -65,6 +66,7 @@ export function LoginForm() {
         <TextField
           label="Password"
           name="password"
+          id="login-password"
           type="password"
           autoComplete="current-password"
           placeholder="••••••••"
