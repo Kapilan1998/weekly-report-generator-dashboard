@@ -58,6 +58,8 @@ public interface ReportRepository extends JpaRepository<Report, Long>, JpaSpecif
 
     long countByProjectId(Long projectId);
 
+    long countByUserId(Long userId);
+
     interface MemberStatusCount {
         Long getUserId();
 

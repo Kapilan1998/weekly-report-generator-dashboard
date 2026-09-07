@@ -43,6 +43,19 @@ public class User {
     @Column(nullable = false, length = 20)
     private Role role;
 
+    /**
+     * A disabled account cannot sign in and its existing tokens stop being accepted. This is
+     * how a team member is retired — deleting them is impossible once they have filed a
+     * report, since their authorship is part of the audit trail.
+     *
+     * <p>{@code @Builder.Default} matters here: Lombok defaults a primitive boolean to
+     * {@code false}, so without it every account created through the builder would be born
+     * unable to log in.
+     */
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean enabled = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

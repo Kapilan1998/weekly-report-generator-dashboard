@@ -12,7 +12,7 @@ every core requirement anyway.
 | 4 | Report detail / view (read-only) | `/reports/:id` | both | **done** — incl. version history |
 | 5 | Team member profile (manager view) | `/team/:userId` | Manager | not started |
 | 6 | Project/category management | `/projects` | Manager | not started |
-| 7 | User management (admin) | `/admin/users` | Manager | not started |
+| 7 | User management (admin) | `/admin/users` | Manager | backend done (Phase 3b); page is Phase 6 |
 | 8 | Manager review page | `/review/:reportId` | Manager | not started |
 | 9 | Team dashboard (filters + summary + charts) | `/team` | Manager | list + status filter done (Phase 4); summary tiles and charts need Phase 3's endpoints |
 | 10 | Profile & settings *(extra)* | `/profile` | both | **done** |

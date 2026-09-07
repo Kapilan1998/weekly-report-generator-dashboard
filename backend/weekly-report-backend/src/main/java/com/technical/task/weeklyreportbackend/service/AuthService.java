@@ -50,6 +50,14 @@ public class AuthService {
             throw new InvalidCredentialsException();
         }
 
+        // Checked here because this method verifies the password directly rather than going
+        // through an AuthenticationProvider, which would have applied it. Deliberately the
+        // same generic error as a wrong password: telling a caller "this account is disabled"
+        // confirms the address exists.
+        if (!user.isEnabled()) {
+            throw new InvalidCredentialsException();
+        }
+
         return toAuthResponse(user, jwtService.generateToken(user));
     }
 
