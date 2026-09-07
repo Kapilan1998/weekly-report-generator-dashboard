@@ -1,5 +1,7 @@
 package com.technical.task.weeklyreportbackend.exception;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -10,6 +12,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -59,6 +62,35 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity.badRequest()
                 .body(body(HttpStatus.BAD_REQUEST, "Invalid value for parameter '" + ex.getName() + "'"));
+    }
+
+    /** e.g. GET /api/dashboard/summary with no weekStart. A missing input is the caller's error. */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingParameter(
+            MissingServletRequestParameterException ex) {
+        return ResponseEntity.badRequest()
+                .body(body(HttpStatus.BAD_REQUEST, "Required parameter '" + ex.getParameterName() + "' is missing"));
+    }
+
+    /**
+     * Bounds on individual request parameters (e.g. {@code @Min}/{@code @Max} on a
+     * {@code @RequestParam}) are enforced by method validation, which throws this rather than
+     * MethodArgumentNotValidException — that one only covers {@code @RequestBody} objects.
+     * Without this handler an out-of-range page size or week count would surface as a 500.
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException ex) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        for (ConstraintViolation<?> violation : ex.getConstraintViolations()) {
+            // The path's last node is the parameter name; the full path includes the method.
+            String path = violation.getPropertyPath().toString();
+            String parameter = path.contains(".") ? path.substring(path.lastIndexOf('.') + 1) : path;
+            fieldErrors.put(parameter, violation.getMessage());
+        }
+
+        Map<String, Object> responseBody = body(HttpStatus.BAD_REQUEST, "Invalid request parameter");
+        responseBody.put("fieldErrors", fieldErrors);
+        return ResponseEntity.badRequest().body(responseBody);
     }
 
     /**
