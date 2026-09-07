@@ -100,14 +100,45 @@ validation), token persistence across reload, role-aware nav, a team member bein
 off `/team`, the manager list + filter, bad-credentials error display, mobile layout. Zero
 console errors, zero lint warnings, clean `tsc -b` build.
 
-## Phase 5 — Frontend: report pages
-- [ ] Personal weekly report page (create/edit) — matches the fixed field structure,
-      task-level sub-table, blocker/achievement flagging, hours breakdown
-- [ ] Report history page (list + status per week)
-- [ ] Report detail/view page (read-only, shared by both roles)
-- [ ] Manager comment clearly visible on the report when Needs Correction
-- [ ] Past-versions list on the detail page (on-demand view)
-- [ ] Basic client-side validation (required fields, 0–100% ranges, etc.)
+## Phase 5 — Frontend: report pages ✅ done (branch `feature/report-pages`)
+- [x] Personal weekly report page (create/edit) at `/reports/new` and `/reports/:id/edit` —
+      the fixed field set, the 8-column task table **in the PDF's column order** (which
+      differs from the `TaskEntry` declaration order), blocker/achievement key flagging,
+      hours breakdown
+- [x] Report history page — rows now open the report, plus a "New report" action
+- [x] Report detail/view page at `/reports/:id`, shared by both roles
+- [x] Manager comment shown prominently when Needs Correction, attributed to the reviewer
+      with the version it was made against
+- [x] Past-versions list on the detail page, loaded on demand, each version openable with
+      the review made against it
+- [x] Client-side validation in two tiers: structural rules (mirroring the backend's bean
+      validation, applied even to a draft save) and submit-only completeness rules
+
+Implementation notes worth keeping:
+- Numeric form fields are held as **strings**, converted only at serialise time. An empty
+  `<input type="number">` reads as `''` and `Number('')` is `0`, so number-typed state would
+  silently post a valid-looking `0` for a field the user never filled in.
+- Task/blocker/achievement rows are keyed by a **client-generated id**, never the server's
+  child id — the backend replaces child rows on every save, so server ids change each time
+  and React would remount every row, dropping focus mid-typing.
+- Key issue / key achievement use **radio semantics**, so "at most one" is structurally
+  impossible to violate rather than merely validated, with an explicit Clear affordance since
+  a radio can't be unset by re-clicking.
+- The week is a static field on edit (the update payload carries no `weekStart`), and the
+  project select locks once `lastSubmittedAt` is set (the backend's own predicate for
+  refusing a retag).
+- `Submit` renders only when `editable && content.submittedAt === null`. Right after a
+  request-changes the current version is still the frozen one, and the backend would refuse
+  with "no changes have been made since the last submission".
+- All four child arrays are always sent — the update DTO has no `@NotNull` on them, so an
+  omitted array is accepted and would silently wipe that section.
+
+Verified in a browser end to end: created a report dated Wednesday Oct 14 and it filed as
+Oct 12–18 (server-side Monday normalisation mirrored client-side), submitted it, had the
+manager request changes, saw the attributed correction banner, edited it (forked to v2),
+**confirmed v1 still renders its original single task and 21.50h while v2 shows two tasks and
+26.00h**, then resubmitted. Zero console errors, clean build and lint, mobile layout checked
+at 390px.
 
 ## Phase 6 — Frontend: manager dashboard & remaining pages
 - [ ] Team dashboard: filters (member, project, date range, status), report list
