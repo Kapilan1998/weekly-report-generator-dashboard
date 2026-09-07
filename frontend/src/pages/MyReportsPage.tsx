@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { listMyReports } from '../api/reports'
 import { Alert } from '../components/Alert'
@@ -11,6 +12,7 @@ import type { PageResponse, ReportSummary } from '../types/api'
 const PAGE_SIZE = 20
 
 export function MyReportsPage() {
+  const navigate = useNavigate()
   const [pageNumber, setPageNumber] = useState(0)
   const [page, setPage] = useState<PageResponse<ReportSummary> | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +49,18 @@ export function MyReportsPage() {
 
   return (
     <section className="animate-fade-up">
-      <PageHeader title="My reports" description="Your weekly reports and where each one stands." />
+      <PageHeader
+        title="My reports"
+        description="Your weekly reports and where each one stands."
+        actions={
+          <Link
+            to="/reports/new"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-950/40 transition hover:bg-brand-500 active:scale-[0.98]"
+          >
+            + New report
+          </Link>
+        }
+      />
 
       {error && (
         <div className="mb-4">
@@ -72,9 +85,21 @@ export function MyReportsPage() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {page.content.map((report) => (
-                  <tr key={report.id} className="transition hover:bg-white/[0.03]">
+                  <tr
+                    key={report.id}
+                    onClick={() => navigate(`/reports/${report.id}`)}
+                    className="cursor-pointer transition hover:bg-white/[0.03]"
+                  >
                     <td className="px-4 py-3.5 font-medium whitespace-nowrap text-ink-100">
-                      {formatWeek(report.weekStart, report.weekEnd)}
+                      {/* The link carries the keyboard/screen-reader affordance; the row
+                          click is a convenience on top of it. */}
+                      <Link
+                        to={`/reports/${report.id}`}
+                        onClick={(event) => event.stopPropagation()}
+                        className="hover:text-brand-200"
+                      >
+                        {formatWeek(report.weekStart, report.weekEnd)}
+                      </Link>
                     </td>
                     <td className="px-4 py-3.5 text-ink-300">{report.project.name}</td>
                     <td className="px-4 py-3.5">
@@ -91,17 +116,19 @@ export function MyReportsPage() {
             {/* Mobile: stacked cards rather than a table squeezed into 390px */}
             <ul className="divide-y divide-white/5 sm:hidden">
               {page.content.map((report) => (
-                <li key={report.id} className="px-4 py-3.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-medium text-ink-100">
-                      {formatWeek(report.weekStart, report.weekEnd)}
+                <li key={report.id}>
+                  <Link to={`/reports/${report.id}`} className="block px-4 py-3.5 transition hover:bg-white/[0.03]">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-medium text-ink-100">
+                        {formatWeek(report.weekStart, report.weekEnd)}
+                      </p>
+                      <StatusBadge status={report.status} />
+                    </div>
+                    <p className="mt-1 text-sm text-ink-300">{report.project.name}</p>
+                    <p className="mt-0.5 text-xs text-ink-500">
+                      Submitted {formatDateTime(report.lastSubmittedAt)}
                     </p>
-                    <StatusBadge status={report.status} />
-                  </div>
-                  <p className="mt-1 text-sm text-ink-300">{report.project.name}</p>
-                  <p className="mt-0.5 text-xs text-ink-500">
-                    Submitted {formatDateTime(report.lastSubmittedAt)}
-                  </p>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -120,7 +147,15 @@ export function MyReportsPage() {
           !error && (
             <EmptyState
               title="No reports yet"
-              description="Creating and editing reports arrives with the report form."
+              description="Start your first weekly report — it takes a couple of minutes."
+              action={
+                <Link
+                  to="/reports/new"
+                  className="inline-flex items-center rounded-lg bg-brand-600 px-3.5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-500"
+                >
+                  + New report
+                </Link>
+              }
             />
           )
         )}

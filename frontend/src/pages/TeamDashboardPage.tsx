@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { listTeamReports } from '../api/reports'
 import { Alert } from '../components/Alert'
@@ -35,6 +36,7 @@ function Avatar({ name }: { name: string }) {
 }
 
 export function TeamDashboardPage() {
+  const navigate = useNavigate()
   const [status, setStatus] = useState<ReportStatus | 'ALL'>('ALL')
   const [pageNumber, setPageNumber] = useState(0)
   const [page, setPage] = useState<PageResponse<ReportSummary> | null>(null)
@@ -127,13 +129,21 @@ export function TeamDashboardPage() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {page.content.map((report) => (
-                  <tr key={report.id} className="transition hover:bg-white/[0.03]">
+                  <tr
+                    key={report.id}
+                    onClick={() => navigate(`/reports/${report.id}`)}
+                    className="cursor-pointer transition hover:bg-white/[0.03]"
+                  >
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2.5">
                         <Avatar name={report.owner.name} />
-                        <span className="font-medium whitespace-nowrap text-ink-100">
+                        <Link
+                          to={`/reports/${report.id}`}
+                          onClick={(event) => event.stopPropagation()}
+                          className="font-medium whitespace-nowrap text-ink-100 hover:text-brand-200"
+                        >
                           {report.owner.name}
-                        </span>
+                        </Link>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap text-ink-300">
@@ -154,7 +164,11 @@ export function TeamDashboardPage() {
             {/* Mobile: stacked cards */}
             <ul className="divide-y divide-white/5 sm:hidden">
               {page.content.map((report) => (
-                <li key={report.id} className="px-4 py-3.5">
+                <li key={report.id}>
+                  <Link
+                    to={`/reports/${report.id}`}
+                    className="block px-4 py-3.5 transition hover:bg-white/[0.03]"
+                  >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <Avatar name={report.owner.name} />
@@ -170,6 +184,7 @@ export function TeamDashboardPage() {
                   <p className="mt-0.5 text-xs text-ink-500">
                     Submitted {formatDateTime(report.lastSubmittedAt)}
                   </p>
+                  </Link>
                 </li>
               ))}
             </ul>
