@@ -21,7 +21,14 @@ review workflow, the frontend foundation (all merged to `main`), and the report 
 (create/edit form, history, detail, version history — on branch `feature/report-pages`).
 
 Phase 3 (project CRUD + dashboard aggregate endpoints) is also done, on branch
-`feature/dashboard-api`.
+`feature/dashboard-api`, plus user administration (`/api/users`, `V3` adds `users.enabled`)
+on the same branch — that one wasn't in the original plan; it was a gap found when scoping
+Phase 6.
+
+**A disabled user must be rejected in three places**, because each bypasses the others:
+`CustomUserDetails.isEnabled()`, `JwtAuthFilter` (it builds its own `Authentication`) and
+`AuthService.login` (it verifies the password directly). Miss one and disabling an account
+silently does nothing until the token expires.
 
 Still to do: **Phase 6** (manager review page, project and user management pages, dashboard
 tiles/charts — the backend it needs now exists), Phase 7 (seed data), Phase 8 (tests),

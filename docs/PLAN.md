@@ -100,6 +100,30 @@ bounds. **Also verified the current-version restriction**: the week holding a co
 counts 2 completed tasks rather than 3, and its hours match v2 rather than v1+v2 — the bug
 that would have silently inflated every chart.
 
+### Phase 3b — User administration ✅ done (branch `feature/dashboard-api`, on top of Phase 3)
+
+Not in the original plan: found when scoping Phase 6, which needs a user-management page the
+brief requires but no endpoint existed for. It is also how a manager account gets created —
+until now that only happened via raw SQL, which would have been awkward in the demo video.
+
+- [x] `V3__add_user_enabled.sql` — adds `users.enabled`, defaulting existing rows to enabled
+- [x] `GET /api/users`, `POST /api/users` (create with an initial password and a role),
+      `PUT /api/users/{id}` (assign role, enable/disable), `DELETE /api/users/{id}` —
+      all MANAGER-only at the class level
+- [x] Three guards, each blocking a change that is hard or impossible to undo: nobody may
+      change their own role or disable themselves; no change may leave zero enabled managers;
+      a user who has filed reports cannot be deleted, only disabled
+- [x] `enabled` wired into all three places that matter — `CustomUserDetails.isEnabled()`,
+      the JWT filter (which builds its own `Authentication`, so nothing else would apply it)
+      and `AuthService.login` (which checks the password directly, bypassing Spring's own
+      checks). Disabling therefore revokes access immediately rather than at token expiry
+- [x] A disabled login fails with the same generic "Invalid email or password" as a wrong
+      password — saying "this account is disabled" would confirm the address exists
+
+Verified with a 38-check suite: RBAC on every endpoint, create/role-assignment rules, all
+three guards, and that a disabled account's **existing token stops working at once** (401)
+as well as being unable to sign in again.
+
 Fixed while here: out-of-range or missing request parameters returned **500** instead of 400.
 `@Min`/`@Max` on a `@RequestParam` throws `ConstraintViolationException`, and a missing param
 throws `MissingServletRequestParameterException` — neither was handled, so the catch-all

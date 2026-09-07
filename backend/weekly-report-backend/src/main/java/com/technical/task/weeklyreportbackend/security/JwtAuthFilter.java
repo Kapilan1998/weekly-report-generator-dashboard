@@ -44,7 +44,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 CustomUserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                if (jwtService.isTokenValid(token, userDetails.getUsername())) {
+                // isEnabled() is checked here explicitly: this filter builds the
+                // Authentication itself rather than going through an AuthenticationProvider,
+                // so nothing else would apply it. Without this a disabled account would keep
+                // working until its token happened to expire.
+                if (userDetails.isEnabled() && jwtService.isTokenValid(token, userDetails.getUsername())) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities()
                     );
