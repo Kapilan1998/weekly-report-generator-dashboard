@@ -1,6 +1,7 @@
 package com.technical.task.weeklyreportbackend.repository;
 
 import com.technical.task.weeklyreportbackend.domain.Report;
+import com.technical.task.weeklyreportbackend.domain.ReportStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -42,4 +44,60 @@ public interface ReportRepository extends JpaRepository<Report, Long>, JpaSpecif
 
     @EntityGraph(attributePaths = {"user", "project"})
     List<Report> findByWeekStart(LocalDate weekStart);
+
+    // ---- dashboard aggregates ----
+
+    long countByWeekStart(LocalDate weekStart);
+
+    long countByWeekStartAndStatus(LocalDate weekStart, ReportStatus status);
+
+    /** Filed at least once, which is what "submitted" means for compliance. */
+    long countByWeekStartAndLastSubmittedAtIsNotNull(LocalDate weekStart);
+
+    long countByStatus(ReportStatus status);
+
+    long countByProjectId(Long projectId);
+
+    interface MemberStatusCount {
+        Long getUserId();
+
+        ReportStatus getStatus();
+
+        long getTotal();
+    }
+
+    interface ProjectReportCount {
+        Long getProjectId();
+
+        String getProjectName();
+
+        long getReportCount();
+    }
+
+    @Query("""
+            select u.id as userId, r.status as status, count(r.id) as total
+            from Report r
+              join r.user u
+            where r.weekStart between :from and :to
+            group by u.id, r.status
+            """)
+    List<MemberStatusCount> countByMemberAndStatus(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
+
+    @Query("""
+            select p.id as projectId, p.name as projectName, count(r.id) as reportCount
+            from Report r
+              join r.project p
+            where r.weekStart between :from and :to
+            group by p.id, p.name
+            order by count(r.id) desc
+            """)
+    List<ProjectReportCount> countByProject(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
+
+    /** Recent submissions for the activity feed. */
+    @EntityGraph(attributePaths = {"user", "project"})
+    List<Report> findTop20ByLastSubmittedAtIsNotNullOrderByLastSubmittedAtDesc();
 }

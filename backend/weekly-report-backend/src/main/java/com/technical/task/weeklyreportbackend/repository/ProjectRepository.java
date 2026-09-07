@@ -15,4 +15,10 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     Optional<Project> findByIdAndActiveTrue(Long id);
 
     List<Project> findByActiveTrueOrderByNameAsc();
+
+    /** For the management page, which has to show inactive projects too. */
+    List<Project> findAllByOrderByNameAsc();
+
+    /** Case-insensitive, because "Client A" and "client a" being distinct would be confusing. */
+    boolean existsByNameIgnoreCase(String name);
 }
