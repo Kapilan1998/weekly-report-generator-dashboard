@@ -8,14 +8,18 @@ const COLLAPSE_KEY = 'wrg.nav.collapsed'
 interface NavItem {
   to: string
   label: string
-  icon: 'reports' | 'team' | 'profile'
+  icon: 'reports' | 'team' | 'compare' | 'projects' | 'users' | 'profile'
   managerOnly?: boolean
 }
 
-// Report create/edit, report detail and the review page arrive with Phase 5/6.
+// Detail, create/edit and review pages are reached from a list rather than from the nav -
+// they all need an id, so there is no meaningful nav destination for them.
 const NAV: NavItem[] = [
   { to: '/reports', label: 'My reports', icon: 'reports' },
   { to: '/team', label: 'Team dashboard', icon: 'team', managerOnly: true },
+  { to: '/team/sections', label: 'Compare sections', icon: 'compare', managerOnly: true },
+  { to: '/projects', label: 'Projects', icon: 'projects', managerOnly: true },
+  { to: '/admin/users', label: 'User management', icon: 'users', managerOnly: true },
   { to: '/profile', label: 'Profile & settings', icon: 'profile' },
 ]
 
@@ -28,6 +32,39 @@ function Icon({ name }: { name: NavItem['icon'] }) {
           strokeLinecap="round"
           strokeLinejoin="round"
           d="M17 20h4v-2a3 3 0 0 0-3-3h-1m-3 5H3v-2a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2Zm-2-11a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 1a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"
+        />
+      </svg>
+    )
+  }
+  if (name === 'compare') {
+    return (
+      <svg {...shared} aria-hidden="true" className="size-5 shrink-0">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4 5h6v14H4V5Zm10 0h6v14h-6V5Z"
+        />
+      </svg>
+    )
+  }
+  if (name === 'projects') {
+    return (
+      <svg {...shared} aria-hidden="true" className="size-5 shrink-0">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3 7a2 2 0 0 1 2-2h3.6a2 2 0 0 1 1.5.7l1 1.3H19a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
+        />
+      </svg>
+    )
+  }
+  if (name === 'users') {
+    return (
+      <svg {...shared} aria-hidden="true" className="size-5 shrink-0">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0 0c-3 0-5.5 1.8-5.5 4v2h11v-2c0-2.2-2.5-4-5.5-4Zm7-6.5a3 3 0 0 1 0 6m1.5 2.2c2 .6 3.5 2 3.5 3.8V19h-3"
         />
       </svg>
     )
@@ -70,7 +107,15 @@ export function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   const items = NAV.filter((item) => !item.managerOnly || isManager)
-  const currentLabel = items.find((item) => location.pathname.startsWith(item.to))?.label ?? ''
+  // Longest match wins: /team/sections starts with /team too, and the breadcrumb has to name
+  // the page you are on rather than its prefix.
+  const currentLabel =
+    items
+      .filter(
+        (item) =>
+          location.pathname === item.to || location.pathname.startsWith(`${item.to}/`),
+      )
+      .sort((left, right) => right.to.length - left.to.length)[0]?.label ?? ''
 
   // Remembered per browser, so the choice survives a reload.
   useEffect(() => {
