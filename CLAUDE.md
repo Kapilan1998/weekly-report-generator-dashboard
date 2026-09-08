@@ -16,23 +16,59 @@ submit/review/correction cycle, plus a manager analytics dashboard.
 
 ## Current status
 
-`docs/PLAN.md` Phases 1, 2, 4 and 5 are done: backend auth/RBAC, the report domain +
-review workflow, the frontend foundation (all merged to `main`), and the report pages
-(create/edit form, history, detail, version history — on branch `feature/report-pages`).
+**`docs/PLAN.md` Phases 1-6 are done.** The whole backend — auth/RBAC, the versioned
+report domain and review workflow, project CRUD, dashboard aggregates, and user
+administration (`/api/users`, `V3` adds `users.enabled`) — and the whole frontend: auth,
+report create/edit/history/detail with version history, the manager dashboard with summary
+tiles and four charts, the review page, project and user management, member profiles, and
+the bonus section-comparison view. Every page in `docs/PAGES.md` is built and reads real
+backend data.
 
-Phase 3 (project CRUD + dashboard aggregate endpoints) is also done, on branch
-`feature/dashboard-api`, plus user administration (`/api/users`, `V3` adds `users.enabled`)
-on the same branch — that one wasn't in the original plan; it was a gap found when scoping
-Phase 6.
+Phases 1-5 and 3/3b are merged to `main`; Phase 6 is on branch `feature/manager-pages`.
 
 **A disabled user must be rejected in three places**, because each bypasses the others:
 `CustomUserDetails.isEnabled()`, `JwtAuthFilter` (it builds its own `Authentication`) and
 `AuthService.login` (it verifies the password directly). Miss one and disabling an account
 silently does nothing until the token expires.
 
-Still to do: **Phase 6** (manager review page, project and user management pages, dashboard
-tiles/charts — the backend it needs now exists), Phase 7 (seed data), Phase 8 (tests),
-Phase 10 (deliverables). Don't assume any endpoint or component mentioned in the docs
+Phases 7 (seed data) and 8 (RBAC tests) are done too, as is the README/ER-diagram half of
+Phase 10. **Still to do:** Phase 9 (optional AI-chat bonus and deployment), and the parts of
+Phase 10 only the user can do — slides, demo video, Drive folder — plus verifying the README
+against a genuinely clean checkout.
+
+### Demo data and the test database
+
+- `seed/DemoDataSeeder.java` loads 6 users and 21 reports **only when the `users` table is
+  empty**, so it never writes over existing data. To reload it, drop the schema and restart;
+  `--app.seed.enabled=false` turns it off. It computes every week relative to today, which is
+  why it is a loader and not a Flyway seed migration — see Phase 7 in `docs/PLAN.md`.
+  Demo password for every seeded account: `Demo@1234`.
+- **The seeder goes through the real lifecycle** (write content to a version → submit freezes
+  it → request-changes adds a comment and no version → the next edit forks the one after).
+  Assembling rows by hand would be shorter but can produce shapes the endpoints never
+  produce, and the dashboard aggregates assume otherwise.
+- `./mvnw test` runs 13 tests against **its own schema** (`weekly_report_dashboard_test`),
+  configured by `src/test/resources/application-test.properties`. Never point the tests at
+  the development database — they delete rows in `@BeforeEach`. H2 and Testcontainers were
+  both considered and rejected; the reasons are in that file and in Phase 8 of `docs/PLAN.md`.
+- The RBAC suite authenticates with **real JWTs from `/api/auth/login`**, not
+  `@WithMockUser`: `JwtAuthFilter` builds its own `Authentication`, so a mocked principal
+  skips the code the tests exist to cover.
+
+### Frontend conventions added in Phase 6
+
+- **No charting library.** The three components in `src/components/charts/` are CSS
+  percentage bars. Read the decision in `docs/ARCHITECTURE.md` before adding Recharts.
+- **`src/lib/keyed.ts`** — fetched data is stored with the parameters it was fetched for, so
+  staleness is derived during render. Use it instead of clearing state at the top of a fetch
+  effect: the lint rule `react(set-state-in-effect)` flags the alternative, and this repo's
+  standard is **zero lint warnings and a clean `tsc -b`**.
+- **The team dashboard keeps every filter in the URL**, not in component state — that is
+  what makes a filtered view shareable and a summary tile a plain link.
+- **What the backend refuses, the UI doesn't offer**: Delete appears only when a report
+  count is zero, and a manager's own row has no role select or disable button. A rule that
+  can't be decided from the data on screen (the last-enabled-manager guard) surfaces as the
+  backend's message instead. Don't assume any endpoint or component mentioned in the docs
 actually exists until you've checked the code; `docs/PLAN.md` is the authoritative
 done/not-done state per item.
 
@@ -73,10 +109,17 @@ worth remembering before assuming an old Spring Boot 3.x pattern still applies:
   at `runtime` scope — importing them in application code compiles-fails. If you need to
   build/serialize JSON manually anywhere (e.g. a custom `AuthenticationEntryPoint` or
   exception handler), use the `tools.jackson.databind` package.
+- **Test annotations moved too.** `@AutoConfigureMockMvc` is now in
+  `org.springframework.boot.webmvc.test.autoconfigure`, not
+  `org.springframework.boot.test.autoconfigure.web.servlet`. The test dependencies are
+  likewise split per feature (`spring-boot-starter-webmvc-test`,
+  `spring-boot-starter-security-test`, …) rather than one `spring-boot-starter-test`.
 - Before assuming any other Spring Boot integration "just works" the old way, check
   `~/.m2/repository/org/springframework/boot/` for a same-named module, or just try
   running the app — errors here tend to be either a loud startup failure (missing
-  bean/table) or a compile error, not a silent behavior change.
+  bean/table) or a compile error, not a silent behavior change. When an import fails,
+  searching the jars for the class name is faster than guessing: the class usually still
+  exists under a new package rather than having been removed.
 
 ## Tech stack (decided)
 
