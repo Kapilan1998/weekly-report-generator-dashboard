@@ -1,0 +1,247 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="940" viewBox="0 0 1240 940" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="one" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M5,1 L5,9" stroke="#64748b" stroke-width="1.6" fill="none"/></marker>
+<marker id="many" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M1,1 L9,5 L1,9" stroke="#64748b" stroke-width="1.6" fill="none"/></marker>
+</defs>
+<rect width="1240" height="940" fill="#ffffff"/>
+<text x="40" y="27" font-size="17" font-weight="700" fill="#0f172a">Weekly Report Generator &amp; Team Dashboard — entity relationship diagram</text>
+<path d="M340,95 L440,105" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)" marker-end="url(#many)"/>
+<text x="392" y="82" font-size="11.5" fill="#475569" text-anchor="middle">owns</text>
+<path d="M340,600 L400,600 L400,214 L440,214" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)" marker-end="url(#many)"/>
+<text x="406" y="316" font-size="11.5" fill="#475569" text-anchor="start">tagged on</text>
+<path d="M605,252 L605,380" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)" marker-end="url(#many)"/>
+<text x="615" y="366" font-size="11.5" fill="#475569" text-anchor="start">has versions</text>
+<path d="M106,198 L106,300" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)" marker-end="url(#many)"/>
+<text x="116" y="286" font-size="11.5" fill="#475569" text-anchor="start">reviews</text>
+<path d="M440,422 L408,422 L408,348 L340,348" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)" marker-end="url(#many)"/>
+<text x="372" y="392" font-size="11.5" fill="#475569" text-anchor="middle">made against</text>
+<path d="M822,80 L870,80" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#many)"/>
+<path d="M822,360 L870,360" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#many)"/>
+<path d="M822,520 L870,520" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#many)"/>
+<path d="M822,680 L870,680" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#many)"/>
+<path d="M822,80 L822,680" fill="none" stroke="#94a3b8" stroke-width="1.6"/>
+<path d="M770,438 L822,438" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)"/>
+<text x="0" y="0" font-size="11.5" fill="#475569" text-anchor="middle" transform="translate(813,380) rotate(-90)">contains</text>
+<rect x="40" y="40" width="300" height="158" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
+<path d="M40,48 a8,8 0 0 1 8,-8 h284 a8,8 0 0 1 8,8 v22 h-300 z" fill="#4f46e5"/>
+<text x="52" y="60" font-size="13" font-weight="700" fill="#ffffff">users</text>
+<text x="52" y="83" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">id</text>
+<text x="288" y="83" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="330" y="83" font-size="9.5" font-weight="700" fill="#4f46e5" text-anchor="end">PK</text>
+<rect x="41" y="88" width="298" height="17" fill="#f8fafc"/>
+<text x="52" y="100" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">name</text>
+<text x="288" y="100" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(255)</text>
+<text x="52" y="117" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">email</text>
+<text x="288" y="117" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(255)</text>
+<text x="330" y="117" font-size="9.5" font-weight="700" fill="#b45309" text-anchor="end">UK</text>
+<rect x="41" y="122" width="298" height="17" fill="#f8fafc"/>
+<text x="52" y="134" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">password_hash</text>
+<text x="288" y="134" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(255)</text>
+<text x="52" y="151" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">role</text>
+<text x="288" y="151" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(20)</text>
+<rect x="41" y="156" width="298" height="17" fill="#f8fafc"/>
+<text x="52" y="168" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">enabled</text>
+<text x="288" y="168" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIT(1)</text>
+<text x="52" y="185" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">created_at</text>
+<text x="288" y="185" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME</text>
+<rect x="40" y="300" width="300" height="141" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
+<path d="M40,308 a8,8 0 0 1 8,-8 h284 a8,8 0 0 1 8,8 v22 h-300 z" fill="#4f46e5"/>
+<text x="52" y="320" font-size="13" font-weight="700" fill="#ffffff">review_comments</text>
+<text x="52" y="343" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">id</text>
+<text x="288" y="343" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="330" y="343" font-size="9.5" font-weight="700" fill="#4f46e5" text-anchor="end">PK</text>
+<rect x="41" y="348" width="298" height="17" fill="#f8fafc"/>
+<text x="52" y="360" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">report_version_id</text>
+<text x="288" y="360" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="330" y="360" font-size="9.5" font-weight="700" fill="#0891b2" text-anchor="end">FK</text>
+<text x="52" y="377" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">reviewer_id</text>
+<text x="288" y="377" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="330" y="377" font-size="9.5" font-weight="700" fill="#0891b2" text-anchor="end">FK</text>
+<rect x="41" y="382" width="298" height="17" fill="#f8fafc"/>
+<text x="52" y="394" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">action</text>
+<text x="288" y="394" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(20)</text>
+<text x="52" y="411" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">comment</text>
+<text x="288" y="411" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(2000)</text>
+<rect x="41" y="416" width="298" height="17" fill="#f8fafc"/>
+<text x="52" y="428" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">created_at</text>
+<text x="288" y="428" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME(6)</text>
+<rect x="40" y="560" width="300" height="124" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
+<path d="M40,568 a8,8 0 0 1 8,-8 h284 a8,8 0 0 1 8,8 v22 h-300 z" fill="#4f46e5"/>
+<text x="52" y="580" font-size="13" font-weight="700" fill="#ffffff">projects</text>
+<text x="52" y="603" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">id</text>
+<text x="288" y="603" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="330" y="603" font-size="9.5" font-weight="700" fill="#4f46e5" text-anchor="end">PK</text>
+<rect x="41" y="608" width="298" height="17" fill="#f8fafc"/>
+<text x="52" y="620" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">name</text>
+<text x="288" y="620" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(120)</text>
+<text x="330" y="620" font-size="9.5" font-weight="700" fill="#b45309" text-anchor="end">UK</text>
+<text x="52" y="637" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">description</text>
+<text x="288" y="637" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(500)</text>
+<rect x="41" y="642" width="298" height="17" fill="#f8fafc"/>
+<text x="52" y="654" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">active</text>
+<text x="288" y="654" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIT(1)</text>
+<text x="52" y="671" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">created_at</text>
+<text x="288" y="671" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME(6)</text>
+<rect x="440" y="60" width="330" height="192" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
+<path d="M440,68 a8,8 0 0 1 8,-8 h314 a8,8 0 0 1 8,8 v22 h-330 z" fill="#4f46e5"/>
+<text x="452" y="80" font-size="13" font-weight="700" fill="#ffffff">reports</text>
+<text x="452" y="103" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">id</text>
+<text x="718" y="103" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="760" y="103" font-size="9.5" font-weight="700" fill="#4f46e5" text-anchor="end">PK</text>
+<rect x="441" y="108" width="328" height="17" fill="#f8fafc"/>
+<text x="452" y="120" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">user_id</text>
+<text x="718" y="120" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="760" y="120" font-size="9.5" font-weight="700" fill="#b45309" text-anchor="end">UK</text>
+<text x="736" y="120" font-size="9.5" font-weight="700" fill="#0891b2" text-anchor="end">FK</text>
+<text x="452" y="137" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">project_id</text>
+<text x="718" y="137" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="760" y="137" font-size="9.5" font-weight="700" fill="#0891b2" text-anchor="end">FK</text>
+<rect x="441" y="142" width="328" height="17" fill="#f8fafc"/>
+<text x="452" y="154" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">week_start</text>
+<text x="718" y="154" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATE</text>
+<text x="760" y="154" font-size="9.5" font-weight="700" fill="#b45309" text-anchor="end">UK</text>
+<text x="452" y="171" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">week_end</text>
+<text x="718" y="171" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATE</text>
+<rect x="441" y="176" width="328" height="17" fill="#f8fafc"/>
+<text x="452" y="188" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">status</text>
+<text x="718" y="188" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(20)</text>
+<text x="452" y="205" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">last_submitted_at</text>
+<text x="718" y="205" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME(6)</text>
+<rect x="441" y="210" width="328" height="17" fill="#f8fafc"/>
+<text x="452" y="222" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">created_at</text>
+<text x="718" y="222" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME(6)</text>
+<text x="452" y="239" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">updated_at</text>
+<text x="718" y="239" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME(6)</text>
+<rect x="440" y="380" width="330" height="192" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
+<path d="M440,388 a8,8 0 0 1 8,-8 h314 a8,8 0 0 1 8,8 v22 h-330 z" fill="#4f46e5"/>
+<text x="452" y="400" font-size="13" font-weight="700" fill="#ffffff">report_versions</text>
+<text x="452" y="423" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">id</text>
+<text x="718" y="423" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="760" y="423" font-size="9.5" font-weight="700" fill="#4f46e5" text-anchor="end">PK</text>
+<rect x="441" y="428" width="328" height="17" fill="#f8fafc"/>
+<text x="452" y="440" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">report_id</text>
+<text x="718" y="440" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="760" y="440" font-size="9.5" font-weight="700" fill="#b45309" text-anchor="end">UK</text>
+<text x="736" y="440" font-size="9.5" font-weight="700" fill="#0891b2" text-anchor="end">FK</text>
+<text x="452" y="457" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">version_number</text>
+<text x="718" y="457" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">INT</text>
+<text x="760" y="457" font-size="9.5" font-weight="700" fill="#b45309" text-anchor="end">UK</text>
+<rect x="441" y="462" width="328" height="17" fill="#f8fafc"/>
+<text x="452" y="474" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">tasks_planned_next_week</text>
+<text x="718" y="474" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(4000)</text>
+<text x="452" y="491" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">notes</text>
+<text x="718" y="491" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(4000)</text>
+<rect x="441" y="496" width="328" height="17" fill="#f8fafc"/>
+<text x="452" y="508" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">links</text>
+<text x="718" y="508" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(1000)</text>
+<text x="452" y="525" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">submitted_at</text>
+<text x="718" y="525" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME(6)</text>
+<rect x="441" y="530" width="328" height="17" fill="#f8fafc"/>
+<text x="452" y="542" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">created_at</text>
+<text x="718" y="542" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME(6)</text>
+<text x="452" y="559" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">updated_at</text>
+<text x="718" y="559" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME(6)</text>
+<rect x="870" y="40" width="330" height="226" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
+<path d="M870,48 a8,8 0 0 1 8,-8 h314 a8,8 0 0 1 8,8 v22 h-330 z" fill="#4f46e5"/>
+<text x="882" y="60" font-size="13" font-weight="700" fill="#ffffff">task_entries</text>
+<text x="882" y="83" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">id</text>
+<text x="1148" y="83" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="1190" y="83" font-size="9.5" font-weight="700" fill="#4f46e5" text-anchor="end">PK</text>
+<rect x="871" y="88" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="100" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">report_version_id</text>
+<text x="1148" y="100" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="1190" y="100" font-size="9.5" font-weight="700" fill="#0891b2" text-anchor="end">FK</text>
+<text x="882" y="117" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">display_order</text>
+<text x="1148" y="117" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">INT</text>
+<rect x="871" y="122" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="134" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">task_name</text>
+<text x="1148" y="134" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(255)</text>
+<text x="882" y="151" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">priority</text>
+<text x="1148" y="151" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(20)</text>
+<rect x="871" y="156" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="168" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">status</text>
+<text x="1148" y="168" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(20)</text>
+<text x="882" y="185" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">planned_percent</text>
+<text x="1148" y="185" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">INT</text>
+<rect x="871" y="190" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="202" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">actual_percent</text>
+<text x="1148" y="202" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">INT</text>
+<text x="882" y="219" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">time_planned_hours</text>
+<text x="1148" y="219" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DECIMAL(5,2)</text>
+<rect x="871" y="224" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="236" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">time_spent_hours</text>
+<text x="1148" y="236" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DECIMAL(5,2)</text>
+<text x="882" y="253" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">output_deliverable</text>
+<text x="1148" y="253" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(500)</text>
+<rect x="870" y="320" width="330" height="124" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
+<path d="M870,328 a8,8 0 0 1 8,-8 h314 a8,8 0 0 1 8,8 v22 h-330 z" fill="#4f46e5"/>
+<text x="882" y="340" font-size="13" font-weight="700" fill="#ffffff">blockers</text>
+<text x="882" y="363" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">id</text>
+<text x="1148" y="363" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="1190" y="363" font-size="9.5" font-weight="700" fill="#4f46e5" text-anchor="end">PK</text>
+<rect x="871" y="368" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="380" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">report_version_id</text>
+<text x="1148" y="380" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="1190" y="380" font-size="9.5" font-weight="700" fill="#0891b2" text-anchor="end">FK</text>
+<text x="882" y="397" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">display_order</text>
+<text x="1148" y="397" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">INT</text>
+<rect x="871" y="402" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="414" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">description</text>
+<text x="1148" y="414" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(1000)</text>
+<text x="882" y="431" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">key_issue</text>
+<text x="1148" y="431" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIT(1)</text>
+<rect x="870" y="480" width="330" height="124" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
+<path d="M870,488 a8,8 0 0 1 8,-8 h314 a8,8 0 0 1 8,8 v22 h-330 z" fill="#4f46e5"/>
+<text x="882" y="500" font-size="13" font-weight="700" fill="#ffffff">achievements</text>
+<text x="882" y="523" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">id</text>
+<text x="1148" y="523" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="1190" y="523" font-size="9.5" font-weight="700" fill="#4f46e5" text-anchor="end">PK</text>
+<rect x="871" y="528" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="540" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">report_version_id</text>
+<text x="1148" y="540" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="1190" y="540" font-size="9.5" font-weight="700" fill="#0891b2" text-anchor="end">FK</text>
+<text x="882" y="557" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">display_order</text>
+<text x="1148" y="557" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">INT</text>
+<rect x="871" y="562" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="574" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">description</text>
+<text x="1148" y="574" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(1000)</text>
+<text x="882" y="591" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">key_achievement</text>
+<text x="1148" y="591" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIT(1)</text>
+<rect x="870" y="640" width="330" height="107" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
+<path d="M870,648 a8,8 0 0 1 8,-8 h314 a8,8 0 0 1 8,8 v22 h-330 z" fill="#4f46e5"/>
+<text x="882" y="660" font-size="13" font-weight="700" fill="#ffffff">hours_entries</text>
+<text x="882" y="683" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">id</text>
+<text x="1148" y="683" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="1190" y="683" font-size="9.5" font-weight="700" fill="#4f46e5" text-anchor="end">PK</text>
+<rect x="871" y="688" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="700" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">report_version_id</text>
+<text x="1148" y="700" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIGINT</text>
+<text x="1190" y="700" font-size="9.5" font-weight="700" fill="#0891b2" text-anchor="end">FK</text>
+<text x="882" y="717" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">task_type</text>
+<text x="1148" y="717" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">VARCHAR(20)</text>
+<rect x="871" y="722" width="328" height="17" fill="#f8fafc"/>
+<text x="882" y="734" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">hours</text>
+<text x="1148" y="734" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DECIMAL(5,2)</text>
+<text x="40" y="764" font-size="11.5" font-weight="700" fill="#0f172a">Enum columns (stored as VARCHAR(20), validated by the application)</text>
+<text x="40" y="783" font-size="10.5" fill="#1e293b" font-family="Consolas, Menlo, monospace">users.role</text>
+<text x="230" y="783" font-size="10.5" fill="#64748b">TEAM_MEMBER | MANAGER</text>
+<text x="40" y="798" font-size="10.5" fill="#1e293b" font-family="Consolas, Menlo, monospace">reports.status</text>
+<text x="230" y="798" font-size="10.5" fill="#64748b">DRAFT | SUBMITTED | NEEDS_CORRECTION | APPROVED</text>
+<text x="40" y="813" font-size="10.5" fill="#1e293b" font-family="Consolas, Menlo, monospace">task_entries.priority</text>
+<text x="230" y="813" font-size="10.5" fill="#64748b">LOW | MEDIUM | HIGH</text>
+<text x="40" y="828" font-size="10.5" fill="#1e293b" font-family="Consolas, Menlo, monospace">task_entries.status</text>
+<text x="230" y="828" font-size="10.5" fill="#64748b">NOT_STARTED | IN_PROGRESS | DONE | BLOCKED</text>
+<text x="40" y="843" font-size="10.5" fill="#1e293b" font-family="Consolas, Menlo, monospace">hours_entries.task_type</text>
+<text x="230" y="843" font-size="10.5" fill="#64748b">DEVELOPMENT | TESTING | MEETINGS | DOCUMENTATION | OTHER</text>
+<text x="40" y="858" font-size="10.5" fill="#1e293b" font-family="Consolas, Menlo, monospace">review_comments.action</text>
+<text x="230" y="858" font-size="10.5" fill="#64748b">APPROVE | REQUEST_CHANGES</text>
+<text x="40" y="884" font-size="11.5" font-weight="700" fill="#0f172a">Keys</text>
+<text x="88" y="884" font-size="10.5" font-weight="700" fill="#4f46e5">PK</text>
+<text x="112" y="884" font-size="10.5" fill="#475569">primary key</text>
+<text x="278" y="884" font-size="10.5" font-weight="700" fill="#0891b2">FK</text>
+<text x="302" y="884" font-size="10.5" fill="#475569">foreign key</text>
+<text x="468" y="884" font-size="10.5" font-weight="700" fill="#b45309">UK</text>
+<text x="492" y="884" font-size="10.5" fill="#475569">part of a unique constraint</text>
+<text x="40" y="902" font-size="10.5" fill="#475569">Unique constraints: (user_id, week_start) on reports — one report per user per week &#183; (report_id, version_number) on report_versions</text>
+<text x="40" y="918" font-size="10.5" fill="#475569">reports has no current_version_id column: the current version is the highest version_number, which avoids a circular foreign key with report_versions</text>
+</svg>

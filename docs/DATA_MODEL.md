@@ -36,6 +36,7 @@ erDiagram
         varchar email UK
         varchar password_hash
         enum role "TEAM_MEMBER | MANAGER"
+        bit enabled
         datetime created_at
     }
     PROJECT {
@@ -70,10 +71,11 @@ erDiagram
     TASK_ENTRY {
         bigint id PK
         bigint report_version_id FK
+        int display_order
         varchar task_name
         enum priority "LOW | MEDIUM | HIGH"
-        int planned_pct
-        int actual_pct
+        int planned_percent
+        int actual_percent
         enum status "NOT_STARTED | IN_PROGRESS | DONE | BLOCKED"
         decimal time_planned_hours
         decimal time_spent_hours
@@ -82,14 +84,16 @@ erDiagram
     BLOCKER {
         bigint id PK
         bigint report_version_id FK
-        text description
-        boolean is_key_issue
+        int display_order
+        varchar description
+        bit key_issue
     }
     ACHIEVEMENT {
         bigint id PK
         bigint report_version_id FK
-        text description
-        boolean is_key_achievement
+        int display_order
+        varchar description
+        bit key_achievement
     }
     HOURS_ENTRY {
         bigint id PK
@@ -106,6 +110,11 @@ erDiagram
         datetime created_at
     }
 ```
+
+Column names and types above are the ones the migrations actually create — see
+`db/migration/V1`, `V2` and `V3`. Exported images of this diagram, for the slide deck and the
+submission folder, live in [`diagrams/`](diagrams/) — `er-diagram.png` for Google Slides,
+which cannot import SVG, and `er-diagram.svg` for reading on screen.
 
 ## Why versioning is modeled this way
 
