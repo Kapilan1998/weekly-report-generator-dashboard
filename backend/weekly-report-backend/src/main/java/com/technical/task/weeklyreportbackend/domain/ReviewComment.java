@@ -58,6 +58,11 @@ public class ReviewComment {
 
     @PrePersist
     void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        // Only defaulted, not forced: every application path leaves it null and gets "now",
+        // while the demo data loader sets its own timestamps so the activity feed reads as a
+        // timeline rather than as one burst at seed time.
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
 }
