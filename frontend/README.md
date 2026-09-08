@@ -37,14 +37,29 @@ npm run lint         # oxlint
 
 ```
 src/
-├── api/          # one module per backend area; client.ts is the only place fetch happens
-├── auth/         # AuthProvider (token + user), useAuth hook, context
-├── components/   # reusable UI: Layout, Button, TextField, Alert, StatusBadge
-├── lib/          # small helpers (date formatting)
-├── pages/        # route-level screens
-├── routes/       # ProtectedRoute (auth + role gate)
-└── types/api.ts  # TypeScript mirror of the backend DTOs
+├── api/                # one module per backend area; client.ts is the only place fetch happens
+├── auth/               # AuthProvider (token + user), useAuth hook, context
+├── components/         # reusable UI: Layout, Button, TextField, Alert, StatusBadge, Pagination
+│   └── charts/         # ColumnChart, BarList, StackedBarList - CSS bars, no chart library
+├── features/           # domain modules: reports/ (form state, task table, version history),
+│                       # dashboard/ (tiles, charts, filters, week picker, activity feed)
+├── lib/                # small helpers: format.ts, week.ts, keyed.ts
+├── pages/              # route-level screens, one per row of ../docs/PAGES.md
+├── routes/             # ProtectedRoute (auth + role gate)
+└── types/api.ts        # TypeScript mirror of the backend DTOs
 ```
+
+Two conventions that are load-bearing rather than stylistic:
+
+- **`lib/keyed.ts`** — fetched data is stored together with the parameters it was fetched
+  for, so "is this stale?" is answered during render. Clearing state at the top of a fetch
+  effect is the alternative and it is worse twice over: an extra render pass on every
+  parameter change, and one frame where the previous week's numbers sit under the new week's
+  heading. It also covers URL changes that come from a link or the Back button, where none of
+  our own handlers run.
+- **The team dashboard keeps every filter in the URL**, not in component state. That makes a
+  filtered view shareable, gives the Back button meaning, and is what lets a summary tile be
+  an ordinary link that arrives with its filter already applied.
 
 `src/types/api.ts` is kept in sync with the backend DTOs **by hand** — change a DTO there
 and change it here.
@@ -65,7 +80,11 @@ the stateless-JWT design was picked to avoid — noted as a future improvement.
 
 ## Status
 
-Phase 4 (foundation) is done: routing, auth context, API client, role-gated routes, shared
-layout, login/register, plus a reports list and team dashboard that read real backend data.
-The report create/edit form, report detail, version history and the manager review page are
-Phase 5/6 — see `../docs/PLAN.md`.
+Complete. Every page in `../docs/PAGES.md` is built and reads real backend data: login and
+register, the report create/edit form, report history, report detail with version history,
+the manager review page, the team dashboard with summary tiles and four charts, team member
+profiles, project management, user management, profile & settings, and the bonus
+section-comparison view.
+
+`npm run build` (typecheck + production build) and `npm run lint` are both expected to be
+clean — zero errors, zero warnings.

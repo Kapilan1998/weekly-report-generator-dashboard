@@ -209,3 +209,113 @@ export interface ReportFilters {
   size?: number
   sort?: string
 }
+// ---- projects & users (manager administration) ----
+
+/** `reportCount` is what decides whether a project can be deleted or only deactivated. */
+export interface ProjectDetail {
+  id: number
+  name: string
+  description: string | null
+  active: boolean
+  reportCount: number
+}
+
+export interface CreateProjectInput {
+  name: string
+  description?: string | null
+}
+
+export interface UpdateProjectInput {
+  name: string
+  description?: string | null
+  active: boolean
+}
+
+/** The manager's view of an account — the one list that exposes email, deliberately. */
+export interface UserDetail {
+  id: number
+  name: string
+  email: string
+  role: Role
+  enabled: boolean
+  reportCount: number
+  createdAt: string
+}
+
+export interface CreateUserInput {
+  name: string
+  email: string
+  password: string
+  role: Role
+}
+
+/** Name and email are not editable here — the endpoint administers access, not identity. */
+export interface UpdateUserInput {
+  role: Role
+  enabled: boolean
+}
+
+// ---- dashboard aggregates ----
+
+/**
+ * `needsCorrection` and `openBlockers` are current-state counts across the whole team, not
+ * week-scoped — see the DTO's note. The tiles have to label them that way.
+ */
+export interface DashboardSummary {
+  weekStart: string
+  weekEnd: string
+  teamSize: number
+  submitted: number
+  draft: number
+  notStarted: number
+  compliancePercent: number
+  needsCorrection: number
+  openBlockers: number
+}
+
+export interface TasksCompletedPoint {
+  weekStart: string
+  completedTasks: number
+}
+
+/** Statuses with no reports are absent from `counts` rather than zero — hence Partial. */
+export interface MemberStatusBreakdown {
+  member: UserSummary
+  counts: Partial<Record<ReportStatus, number>>
+}
+
+export interface ProjectWorkloadPoint {
+  projectId: number
+  projectName: string
+  reportCount: number
+  /** BigDecimal on the wire: a JSON number, but read it through Number() before arithmetic. */
+  hoursSpent: number
+}
+
+export interface TaskTypeHoursPoint {
+  taskType: TaskType
+  hours: number
+}
+
+export interface DashboardCharts {
+  tasksCompletedTrend: TasksCompletedPoint[]
+  statusByMember: MemberStatusBreakdown[]
+  workloadByProject: ProjectWorkloadPoint[]
+  hoursByTaskType: TaskTypeHoursPoint[]
+}
+
+export type ActivityType = 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED'
+
+export interface ActivityItem {
+  type: ActivityType
+  reportId: number
+  weekStart: string
+  /** Whose report it is. */
+  owner: UserSummary
+  /** Who acted — the owner for a submission, the manager for a review. */
+  actor: UserSummary
+  projectName: string
+  versionNumber: number | null
+  comment: string | null
+  at: string
+}

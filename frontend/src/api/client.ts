@@ -39,6 +39,14 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The backend's own message when there is one, and a fixed fallback otherwise — a raw
+ * `Error.message` from fetch or a JSON parse is never something to put in front of a user.
+ */
+export function errorMessage(caught: unknown, fallback: string): string {
+  return caught instanceof ApiError ? caught.message : fallback
+}
+
 export type QueryValue = string | number | boolean | undefined | null | (string | number)[]
 
 interface RequestOptions {

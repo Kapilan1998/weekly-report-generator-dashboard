@@ -148,6 +148,11 @@ export function ReportDetailPage() {
                 Submit for review
               </Button>
             )}
+            {/* `reviewable` is the backend's own answer to "may this caller review this
+                report" - manager, not the author, status Submitted. */}
+            {report.reviewable && (
+              <Button onClick={() => navigate(`/review/${reportId}`)}>Review report</Button>
+            )}
           </div>
         }
       />

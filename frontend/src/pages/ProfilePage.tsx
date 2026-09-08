@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { Button } from '../components/Button'
 import { Card, PageHeader } from '../components/Card'
@@ -63,12 +63,22 @@ export function ProfilePage() {
           <Button variant="secondary" onClick={handleSignOut}>
             Sign out
           </Button>
-          {/* Editing a profile and changing a password need backend endpoints that do not
-              exist yet - see docs/PLAN.md Phase 3. */}
+          {/* Self-service profile editing has no endpoint: /api/users is manager-only and
+              deliberately administers access rather than identity, so there is nothing to
+              call for "change my own name or password". */}
           <p className="mt-3 text-xs text-ink-500">
-            Editing your details and changing your password arrive with the account
-            management endpoints.
+            Your name and email are set when the account is created. A manager can change
+            roles and access from user management; editing your own details and password
+            would need endpoints this project doesn&apos;t have.
           </p>
+          {isManager && (
+            <Link
+              to="/admin/users"
+              className="mt-2 inline-block text-xs font-medium text-brand-300 transition hover:text-brand-200"
+            >
+              Go to user management →
+            </Link>
+          )}
         </div>
       </Card>
     </section>

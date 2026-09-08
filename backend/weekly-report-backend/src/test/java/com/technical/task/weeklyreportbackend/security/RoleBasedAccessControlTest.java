@@ -1,0 +1,440 @@
+package com.technical.task.weeklyreportbackend.security;
+
+import com.technical.task.weeklyreportbackend.domain.Project;
+import com.technical.task.weeklyreportbackend.domain.Role;
+import com.technical.task.weeklyreportbackend.domain.User;
+import com.technical.task.weeklyreportbackend.repository.ProjectRepository;
+import com.technical.task.weeklyreportbackend.repository.ReportRepository;
+import com.technical.task.weeklyreportbackend.repository.ReportVersionRepository;
+import com.technical.task.weeklyreportbackend.repository.ReviewCommentRepository;
+import com.technical.task.weeklyreportbackend.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * The assignment's RBAC requirement, as executable assertions: "a team member must never be
+ * able to access another team member's report data or a manager-only endpoint."
+ *
+ * <p>These run through the real filter chain with real JWTs obtained from
+ * {@code /api/auth/login}, rather than with {@code @WithMockUser}. That matters here: this
+ * application's {@code JwtAuthFilter} builds its own {@code Authentication} — including the
+ * {@code enabled} check — so a mocked principal would skip the exact code the tests are
+ * about.
+ *
+ * <p>Several assertions pin behaviour that is easy to "fix" into a vulnerability:
+ * <ul>
+ *   <li>A peer's report is <strong>404, not 403</strong>, so report ids cannot be enumerated
+ *       — and that holds for an <em>approved</em> peer report too, which is what pins the
+ *       ordering of the ownership check before the status check.</li>
+ *   <li>Registration cannot mint a manager. This was a real vulnerability in Phase 1.</li>
+ *   <li>{@code ?sort=} is whitelisted, because Spring Data will happily order rows by
+ *       {@code user.passwordHash} and leak information through the ordering itself.</li>
+ * </ul>
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class RoleBasedAccessControlTest {
+
+    private static final String PASSWORD = "Str0ng!Pass";
+    private static final Pattern TOKEN = Pattern.compile("\"token\"\\s*:\\s*\"([^\"]+)\"");
+
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private ProjectRepository projectRepository;
+    @Autowired
+    private ReportRepository reportRepository;
+    @Autowired
+    private ReportVersionRepository versionRepository;
+    @Autowired
+    private ReviewCommentRepository reviewCommentRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    private User alice;
+    private User bob;
+    private User manager;
+    private Long projectId;
+
+    private String aliceToken;
+    private String bobToken;
+    private String managerToken;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        // Deleted in FK order. Versions cascade to tasks, blockers, achievements and hours.
+        reviewCommentRepository.deleteAll();
+        versionRepository.deleteAll();
+        reportRepository.deleteAll();
+        userRepository.deleteAll();
+
+        alice = createUser("Alice Member", "alice@test.local", Role.TEAM_MEMBER, true);
+        bob = createUser("Bob Member", "bob@test.local", Role.TEAM_MEMBER, true);
+        manager = createUser("Mia Manager", "mia@test.local", Role.MANAGER, true);
+
+        // V2 seeds five projects, and Flyway runs in this context, so one is always available.
+        projectId = projectRepository.findByActiveTrueOrderByNameAsc().stream()
+                .findFirst()
+                .map(Project::getId)
+                .orElseThrow(() -> new IllegalStateException("no project seeded by V2"));
+
+        aliceToken = login("alice@test.local");
+        bobToken = login("bob@test.local");
+        managerToken = login("mia@test.local");
+    }
+
+    // ---- the two requirements the brief states outright ----
+
+    @Test
+    @DisplayName("a team member cannot read another team member's report — and gets 404, not 403")
+    void peerReportIsNotReadable() throws Exception {
+        long aliceReport = createDraft(aliceToken, currentMonday());
+
+        mockMvc.perform(get("/api/reports/{id}", aliceReport).header("Authorization", bearer(bobToken)))
+                .andExpect(status().isNotFound());
+
+        // Same answer for an id that doesn't exist, which is the point: the two are
+        // indistinguishable, so ids cannot be probed.
+        mockMvc.perform(get("/api/reports/{id}", 987654321L).header("Authorization", bearer(bobToken)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("a peer's approved report is still 404 — ownership is checked before status")
+    void approvedPeerReportIsAlsoNotReadable() throws Exception {
+        long aliceReport = createDraft(aliceToken, currentMonday());
+        submit(aliceToken, aliceReport);
+        approve(managerToken, aliceReport);
+
+        // If the status check ran first this would answer "409 already approved" for a real
+        // id and 404 for a fake one, which discloses both existence and state.
+        mockMvc.perform(get("/api/reports/{id}", aliceReport).header("Authorization", bearer(bobToken)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("a team member cannot reach any manager-only read endpoint")
+    void managerOnlyReadsAreForbidden() throws Exception {
+        String[] paths = {
+                "/api/reports",
+                "/api/reports/week-status?weekStart=" + currentMonday(),
+                "/api/users",
+                "/api/projects/all",
+                "/api/dashboard/summary?weekStart=" + currentMonday(),
+                "/api/dashboard/charts?weekStart=" + currentMonday(),
+                "/api/dashboard/activity",
+        };
+
+        for (String path : paths) {
+            mockMvc.perform(get(path).header("Authorization", bearer(aliceToken)))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
+    @DisplayName("a team member cannot reach any manager-only write endpoint, with a valid body")
+    void managerOnlyWritesAreForbidden() throws Exception {
+        long aliceReport = createDraft(aliceToken, currentMonday());
+        submit(aliceToken, aliceReport);
+
+        // Bodies are valid on purpose. An invalid one would be rejected at argument binding,
+        // which happens before method security and would pass this test for the wrong reason.
+        mockMvc.perform(post("/api/projects")
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Should Not Exist\",\"description\":null}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/users")
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Should Not Exist","email":"nope@test.local",
+                                 "password":"Str0ng!Pass","role":"MANAGER"}"""))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete("/api/projects/{id}", projectId).header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/reports/{id}/approve", aliceReport)
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":null}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/reports/{id}/request-changes", aliceReport)
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"let me review my own report\"}"))
+                .andExpect(status().isForbidden());
+
+        // Nothing was created by any of the above.
+        assertThat(projectRepository.findAllByOrderByNameAsc())
+                .extracting(Project::getName)
+                .doesNotContain("Should Not Exist");
+        assertThat(userRepository.findByEmail("nope@test.local")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("an unauthenticated request is 401, not a bare 403")
+    void unauthenticatedRequestIsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/reports/mine")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/reports")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", "Bearer not-a-token"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---- regressions worth keeping nailed down ----
+
+    @Test
+    @DisplayName("registration cannot mint a manager")
+    void registrationCannotChooseARole() throws Exception {
+        // RegisterRequest has no role field and unknown properties are rejected globally, so
+        // this is a 400. Phase 1 accepted it and created a MANAGER against a permitAll
+        // endpoint, which walked straight through every hasRole('MANAGER') gate.
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Evil Escalator","email":"evil@test.local",
+                                 "password":"Str0ng!Pass","role":"MANAGER"}"""))
+                .andExpect(status().isBadRequest());
+        assertThat(userRepository.findByEmail("evil@test.local")).isEmpty();
+
+        // And the accepted form always yields a team member.
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Plain Member","email":"plain@test.local",
+                                 "password":"Str0ng!Pass"}"""))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role").value("TEAM_MEMBER"));
+
+        assertThat(userRepository.findByEmail("plain@test.local"))
+                .get()
+                .extracting(User::getRole)
+                .isEqualTo(Role.TEAM_MEMBER);
+    }
+
+    @Test
+    @DisplayName("a manager may read a peer's submitted report but not their draft")
+    void managerSeesSubmittedContentButNotADraft() throws Exception {
+        long draft = createDraft(aliceToken, currentMonday());
+
+        mockMvc.perform(get("/api/reports/{id}", draft).header("Authorization", bearer(managerToken)))
+                .andExpect(status().isForbidden());
+
+        submit(aliceToken, draft);
+
+        mockMvc.perform(get("/api/reports/{id}", draft).header("Authorization", bearer(managerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.owner.id").value(alice.getId()))
+                .andExpect(jsonPath("$.reviewable").value(true));
+    }
+
+    @Test
+    @DisplayName("a manager cannot review their own report")
+    void managerCannotSelfReview() throws Exception {
+        long own = createDraft(managerToken, currentMonday());
+        submit(managerToken, own);
+
+        mockMvc.perform(post("/api/reports/{id}/approve", own)
+                        .header("Authorization", bearer(managerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":null}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("the sort parameter is whitelisted, not passed through to the query")
+    void sortPropertyIsWhitelisted() throws Exception {
+        // Spring Data resolves a dotted sort property into a join and would order rows by
+        // another user's password hash, leaking information through the ordering itself.
+        mockMvc.perform(get("/api/reports?sort=user.passwordHash,asc")
+                        .header("Authorization", bearer(managerToken)))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/reports/mine?sort=user.passwordHash,asc")
+                        .header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isBadRequest());
+
+        // A whitelisted property still works, so the guard isn't just rejecting everything.
+        mockMvc.perform(get("/api/reports?sort=weekStart,desc")
+                        .header("Authorization", bearer(managerToken)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("disabling an account revokes an already-issued token immediately")
+    void disablingRevokesAnExistingToken() throws Exception {
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isOk());
+
+        alice.setEnabled(false);
+        userRepository.save(alice);
+
+        // Not at token expiry: JwtAuthFilter checks the flag on every request.
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isUnauthorized());
+
+        // And the same generic message as a wrong password, so a disabled address isn't
+        // confirmed as existing.
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"alice@test.local\",\"password\":\"" + PASSWORD + "\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Invalid email or password"));
+    }
+
+    @Test
+    @DisplayName("a team member cannot edit a peer's report even while it is editable")
+    void peerReportIsNotWritable() throws Exception {
+        long aliceReport = createDraft(aliceToken, currentMonday());
+
+        mockMvc.perform(post("/api/reports/{id}/submit", aliceReport)
+                        .header("Authorization", bearer(bobToken)))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/api/reports/{id}/versions", aliceReport)
+                        .header("Authorization", bearer(bobToken)))
+                .andExpect(status().isNotFound());
+
+        // Alice's report is untouched: still exactly one report, still hers.
+        assertThat(reportRepository.count()).isEqualTo(1);
+        assertThat(reportRepository.findById(aliceReport))
+                .get()
+                .extracting(report -> report.getUser().getId())
+                .isEqualTo(alice.getId());
+    }
+
+    @Test
+    @DisplayName("/api/reports/mine has no userId parameter to bind, so it cannot be pointed elsewhere")
+    void mineCannotBeRedirectedToAnotherUser() throws Exception {
+        createDraft(aliceToken, currentMonday());
+
+        // A shared filter object would bind this and rely on the service ignoring it. The
+        // endpoint simply doesn't declare it, so Bob's own (empty) history comes back.
+        mockMvc.perform(get("/api/reports/mine?userId={id}", alice.getId())
+                        .header("Authorization", bearer(bobToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    // ---- helpers ----
+
+    private User createUser(String name, String email, Role role, boolean enabled) {
+        return userRepository.save(User.builder()
+                .name(name)
+                .email(email)
+                .passwordHash(passwordEncoder.encode(PASSWORD))
+                .role(role)
+                .enabled(enabled)
+                .build());
+    }
+
+    /**
+     * A real token from the real endpoint. Extracted with a regex rather than a JSON parser
+     * on purpose — this project runs Jackson 3 ({@code tools.jackson.databind}) and a test
+     * helper is not worth coupling to either Jackson's API.
+     */
+    private String login(String email) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Matcher matcher = TOKEN.matcher(result.getResponse().getContentAsString());
+        if (!matcher.find()) {
+            throw new IllegalStateException("login response carried no token: "
+                    + result.getResponse().getContentAsString());
+        }
+        return matcher.group(1);
+    }
+
+    private String bearer(String token) {
+        return "Bearer " + token;
+    }
+
+    private LocalDate currentMonday() {
+        return LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+    }
+
+    /** A draft complete enough to be submitted, so the workflow steps below can run. */
+    private long createDraft(String token, LocalDate weekStart) throws Exception {
+        String body = """
+                {
+                  "weekStart": "%s",
+                  "projectId": %d,
+                  "tasksPlannedNextWeek": "Continue the migration",
+                  "notes": null,
+                  "links": null,
+                  "tasks": [
+                    {
+                      "taskName": "Write the RBAC tests",
+                      "priority": "HIGH",
+                      "status": "DONE",
+                      "plannedPercent": 100,
+                      "actualPercent": 100,
+                      "timePlannedHours": 6.00,
+                      "timeSpentHours": 6.50,
+                      "outputDeliverable": "RoleBasedAccessControlTest.java"
+                    }
+                  ],
+                  "blockers": [],
+                  "achievements": [],
+                  "hours": [{ "taskType": "DEVELOPMENT", "hours": 6.50 }]
+                }""".formatted(weekStart, projectId);
+
+        MvcResult result = mockMvc.perform(post("/api/reports")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Matcher matcher = Pattern.compile("\"id\"\\s*:\\s*(\\d+)")
+                .matcher(result.getResponse().getContentAsString());
+        if (!matcher.find()) {
+            throw new IllegalStateException("create response carried no id");
+        }
+        return Long.parseLong(matcher.group(1));
+    }
+
+    private void submit(String token, long reportId) throws Exception {
+        mockMvc.perform(post("/api/reports/{id}/submit", reportId).header("Authorization", bearer(token)))
+                .andExpect(status().isOk());
+    }
+
+    private void approve(String token, long reportId) throws Exception {
+        mockMvc.perform(post("/api/reports/{id}/approve", reportId)
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":null}"))
+                .andExpect(status().isOk());
+    }
+}

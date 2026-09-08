@@ -188,36 +188,175 @@ manager request changes, saw the attributed correction banner, edited it (forked
 26.00h**, then resubmitted. Zero console errors, clean build and lint, mobile layout checked
 at 390px.
 
-## Phase 6 — Frontend: manager dashboard & remaining pages
-- [ ] Team dashboard: filters (member, project, date range, status), report list
-- [ ] Manager review page: open a submitted report, Approve / Request Changes + comment
-- [ ] Team member profile page (history + basic stats)
-- [ ] Project/category management page (list + CRUD, not a modal)
-- [ ] User management page (admin: invite/remove, assign roles)
-- [ ] Summary metrics + charts on the dashboard (Recharts by default)
-- [ ] Bonus: side-by-side single-section view (e.g. all Blockers) across the team for a
-      selected week
+## Phase 6 — Frontend: manager dashboard & remaining pages ✅ done (branch `feature/manager-pages`)
+- [x] Team dashboard: all four filters (member, project, week range, multi-select status)
+      plus the report list, with a Review shortcut on every reviewable row
+- [x] Manager review page at `/review/:reportId`: one form with an outcome switch —
+      Approve (optional note) / Request changes (required comment) — the previous decision,
+      the full content and the version history
+- [x] Team member profile page at `/team/:userId` (status stats + full paginated history)
+- [x] Project/category management page at `/projects` (list + create/rename/deactivate/
+      delete, editor as a page panel rather than a modal)
+- [x] User management page at `/admin/users` (add account, assign role, disable/enable,
+      delete)
+- [x] Summary tiles + a compliance breakdown bar + four charts — **built without a
+      charting library**; see the decision in `docs/ARCHITECTURE.md`
+- [x] Bonus: side-by-side single-section view at `/team/sections` — pick a week and a
+      section (blockers, achievements, planned, tasks, hours, notes) and read it across
+      every team member at once
 
-## Phase 7 — Seed data
-- [ ] Flyway seed migration (or a `CommandLineRunner`/data loader) creating 3–5 team
-      members + 1–2 managers, several projects, and multiple weeks of reports across
-      different statuses (some Draft, some Submitted, some Needs Correction with a
-      comment, some Approved, some with >1 version) — enough for the dashboard to look
-      real
+**Decisions worth knowing before changing these pages:**
+- **The team dashboard keeps all of its state in the URL** (week, chart window, every
+  filter, page number). That is what makes the "Needs correction" tile a plain link into
+  the same page with the filter applied, and it makes a filtered view shareable. Filter
+  changes `replace` the history entry so Back leaves the page rather than replaying clicks.
+- **Fetched data is stored with the parameters it was fetched for** (`src/lib/keyed.ts`),
+  so "still loading" is derived during render. Clearing state at the top of the fetch
+  effect was the alternative and it is worse twice over: an extra render pass on every
+  change, and one frame where last week's numbers sit under the new week's heading. It also
+  covers URL changes that come from a link or the Back button, where no handler of ours runs.
+- **The review panel is gated on `report.reviewable` alone** — the backend already computes
+  "manager, not the author, status Submitted". Re-deriving it here would be a second copy.
+- **What the backend refuses, the UI doesn't offer.** Delete appears on a project or account
+  only when its report count is zero; a manager's own row has no role select and no disable
+  button. The last-enabled-manager rule can't be predicted from a single row, so that one
+  surfaces as the backend's message.
+- **`/team/sections` is N+1 requests by design** — list the week's reports, then fetch each
+  detail — because no endpoint returns one section across the team. N is the size of a team
+  and the fetches are parallel. Other people's drafts are filtered out before fetching
+  (a manager may not read them) and the number skipped is shown, since a silently short
+  list would read as "nobody had blockers".
+- **Member status counts come from four `size=1` queries** reading `totalElements`, not from
+  fetching every report and counting. Exact at any history size.
 
-## Phase 8 — Testing
-- [ ] At least one automated test proving RBAC: a team member's request for another
-      team member's report is rejected; a non-manager hitting a manager-only endpoint
-      is rejected
-- [ ] Port the Phase 2 end-to-end/RBAC checks into JUnit. They currently exist as a shell
-      suite driven with curl (88 checks, all passing) which proved the behaviour but is not
-      part of the build. Worth also asserting: register with `role=MANAGER` yields a
-      TEAM_MEMBER; a peer's *approved* report still returns 404 (pins guard ordering); v1's
-      child rows are unchanged after a full correction cycle.
-- [ ] Decide the test database before writing these: `BIT(1)` defaults, MySQL `CHECK`
-      constraints and `ddl-auto=validate` + Flyway mean the real V2 migration runs in any
-      `@SpringBootTest` context, so H2 is not a drop-in. Testcontainers MySQL or a
-      dedicated local test schema.
+Verified in a browser against the live backend, end to end: approved a submitted report and
+watched the status, banner and panel change, then the "already approved" state on reload;
+the empty-comment guard on Request changes; project create → duplicate-name 409 inline on
+the name field → rename → deactivate → delete; account create with all three validators
+firing, role promote/demote, disable (and confirmed the disabled account's login then
+fails 401) and delete; the summary tile deep-link applying its filter (8 of 8); Monday
+normalisation in the range filter (picked a Wednesday, URL got that week's Monday); a
+member's four status counts summing exactly to the pagination total (4+5+4+3 = 16); the
+section view including its private-draft notice. Team-member RBAC re-checked directly
+against the API: **403 on all seven manager reads and on every write with a valid body,
+with nothing created.** Zero console errors, clean `tsc -b`, zero lint warnings, mobile
+layout checked at 390px. Every test artifact was removed — the database is byte-for-byte
+as it was found.
+
+### Found in a later audit and fixed (branch `feature/manager-pages`)
+
+- **The status filter had no "not started".** The brief lists it alongside the four real
+  statuses. It isn't one — it is the absence of a report row for the selected week, so the
+  report list cannot return it — so it is a separate chip that swaps the list for the roster
+  of members who haven't filed, built from the `week-status` rows the "Filed this week"
+  panel already fetched. Mutually exclusive with the status chips, because the two answers
+  come from different queries and can't be unioned into one page. Only the member filter
+  carries over: a report that was never filed has no project and no date to filter on.
+- **A duplicate-week 409 showed as a detached banner.** It carries no `fieldErrors`, so it
+  fell through to the generic banner. It now lands on the week input, and the existing report
+  is looked up so "you already have one" comes with a link to open it.
+- **`&apos;` inside a JavaScript string** rendered literally in the submit-blocked banner —
+  an HTML entity in a JS string is just those six characters.
+- **The password field on the user-management page sat outside a `<form>`**, so password
+  managers ignored it, Enter didn't submit, and Chrome logged a warning. It is a real form now.
+- **Duplicate member names were indistinguishable** in the dashboard's member filter. Where
+  a name is not unique the email is appended; unique names stay clean.
+
+## Phase 7 — Seed data ✅ done (branch `feature/manager-pages`)
+- [x] `seed/DemoDataSeeder.java` — an `ApplicationRunner` creating 2 managers, 4 team
+      members and six weeks of reports across every status, including one report with two
+      versions from a full correction cycle. 21 reports, 22 versions, 18 review comments.
+
+**Why a loader and not a Flyway seed migration.** A migration has to hardcode absolute week
+dates, and the dashboard opens on the *current* week — run the project a month after those
+dates were written and it greets you with an empty dashboard. Every week here is computed
+relative to today. It also means passwords are hashed by the real `PasswordEncoder` instead
+of being pasted in as pre-computed digests.
+
+**Guards.** It runs only when the `users` table is empty, so it is safe on every restart and
+can never write over data someone entered. `--app.seed.enabled=false` turns it off (the tests
+set that). To reload it, drop the schema and restart.
+
+**It goes through the same states the API does** — content written to a version, submit
+freezes that version, request-changes adds a comment and no version, the next edit forks the
+version after it. Hand-assembling the rows would have been shorter but could produce shapes
+the real endpoints never produce (a frozen version whose children changed, a
+NEEDS_CORRECTION report with an unfrozen current version), and the dashboard aggregates
+assume otherwise.
+
+The current week is arranged so every part of the dashboard has something to show: Priya has
+a report **waiting for review**, Daniel one **waiting on its author** with the manager's
+comment on it, Sofia a **draft**, and Liam **nothing at all** — which is what makes the
+compliance rate and the "not started" filter show something other than 100%.
+
+Verified against a throwaway schema (never the development database): all four statuses
+present, Sofia's previous-week report holding v1 with 2 tasks and no blockers next to v2 with
+4 tasks and 2 blockers, each review comment attached to the version it was made against, and
+**the trend chart counting 12 completed tasks for that week rather than 14** — i.e. the
+current-version rule holding on seeded data too.
+
+## Phase 8 — Testing ✅ done (branch `feature/manager-pages`)
+- [x] `security/RoleBasedAccessControlTest.java` — 12 integration tests through the real
+      filter chain.
+- [x] **Mockito unit tests for every controller and every service** — 172 of them, no Spring
+      context, one class per production class:
+      `AuthControllerTest`, `DashboardControllerTest`, `PingControllerTest`,
+      `ProjectControllerTest`, `ReportControllerTest`, `UserControllerTest`,
+      `ReportSortWhitelistTest`, `AuthServiceTest`, `DashboardServiceTest`,
+      `ProjectServiceTest`, `ReportAccessGuardTest`, `ReportReviewServiceTest`,
+      `ReportServiceTest`, `UserAdminServiceTest`.
+- [x] `./mvnw test` runs **185 tests green**.
+
+The two layers test different things and neither replaces the other. The controller tests
+assert only what a controller decides — which service method, which arguments, which status
+code — because that is all a controller does. The service tests are where the rules live:
+week normalisation, the lazy version fork, the three user-administration guards, compliance
+arithmetic, chart zero-filling. `RoleBasedAccessControlTest` stays because RBAC is a property
+of the filter chain and the method-security proxy, and a mocked test cannot observe either.
+
+Worth knowing when editing these:
+- `MockitoExtension` is **strict** by default, so an unused stub fails the test. Stub inside
+  the test method, not in a shared setup, unless every test needs it.
+- A fake `save` that echoes its argument back leaves the id null, and the service then looks
+  the row up by that id. `ReportServiceTest.stubSaveAssigningAnId` assigns one, which is what
+  identity generation really does.
+- `ReportReviewServiceTest` ends with a reflection assertion on the service's field list. It
+  is deliberate: "a manager cannot rewrite report content" holds because that class has no
+  dependency capable of writing content, and the test is there to make anyone who adds one
+  stop and justify it.
+- [x] **Test database decided: a dedicated local MySQL schema**
+      (`weekly_report_dashboard_test`, created automatically), configured in
+      `src/test/resources/application-test.properties` as a short diff over the main
+      properties. H2 was ruled out — V2 uses `BIT(1) DEFAULT b'1'`, MySQL `CHECK`
+      constraints and MySQL types, and with `ddl-auto=validate` the real migrations run in
+      every `@SpringBootTest` context, which H2's compatibility mode does not survive.
+      Testcontainers was ruled out because it needs Docker, which the README does not
+      otherwise require; anyone who followed the README already has MySQL.
+- [x] `WeeklyReportBackendApplicationTests` moved onto the test profile too — without it,
+      `mvnw test` ran Flyway against the development database.
+
+What the suite asserts, beyond the brief's minimum:
+- a peer's report is **404, not 403**, and so is a nonexistent id — ids can't be enumerated
+- a peer's **approved** report is also 404, which pins ownership-before-status ordering
+- all seven manager-only reads → 403 for a team member
+- all manager-only writes → 403 **with valid bodies** (an invalid body is rejected at
+  argument binding, before method security, and would pass for the wrong reason)
+- unauthenticated → 401, not Spring Security's bare 403
+- registration cannot mint a manager (the Phase 1 vulnerability, kept nailed down)
+- a manager may read a peer's *submitted* report but not their *draft*
+- a manager cannot review their own report
+- `?sort=user.passwordHash` → 400 on both list endpoints, and a whitelisted property still works
+- disabling an account invalidates an **already-issued token** on the next request
+- `/api/reports/mine?userId=<someone-else>` returns your own history, because the endpoint
+  declares no such parameter to bind
+
+Tokens come from the real `/api/auth/login`, not `@WithMockUser`: `JwtAuthFilter` builds its
+own `Authentication` (including the `enabled` check), so a mocked principal would skip the
+exact code these tests are about.
+
+**Spring Boot 4 gotcha hit here:** `@AutoConfigureMockMvc` has moved from
+`org.springframework.boot.test.autoconfigure.web.servlet` to
+`org.springframework.boot.webmvc.test.autoconfigure`.
 
 ## Phase 9 — Bonus (optional, do last)
 - [ ] AI Chat Assistant (LLM choice + integration approach TBD — document prompt design
@@ -225,8 +364,18 @@ at 390px.
 - [ ] Deployment (publicly accessible instance)
 
 ## Phase 10 — Deliverables wrap-up
-- [ ] Root README finalized and verified against a clean checkout
-- [ ] ER diagram exported as an image into `docs/diagrams/`
+- [x] Root README rewritten: current status, the four setup steps, the demo accounts table,
+      a five-minute reviewer tour, how to reload the demo data, how to run the tests, and a
+      "what to look at first" section. It previously told you to run raw SQL to create a
+      manager — which the user-management page now does, and which the brief's video
+      instructions rule out on camera anyway.
+- [x] ER diagram exported to `docs/diagrams/er-diagram.svg`, generated by
+      `docs/diagrams/generate_er_diagram.py` so it can be regenerated when a migration adds
+      a column rather than hand-edited. Fixed three errors the Mermaid copy in
+      `docs/DATA_MODEL.md` had accumulated: `planned_pct`/`actual_pct` (really
+      `planned_percent`/`actual_percent`), the missing V3 `enabled` column, and missing
+      `display_order` columns.
+- [ ] Verify the README against a genuinely clean checkout (fresh clone, empty MySQL)
 - [ ] Presentation (Google Slides) covering architecture, DB design, frontend
       components, API/RBAC, review-workflow implementation, challenges, future
       improvements

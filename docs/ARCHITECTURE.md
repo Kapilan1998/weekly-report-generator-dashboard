@@ -1,7 +1,8 @@
 # Architecture
 
-Status: **planned, not yet implemented**. This describes the target architecture the
-implementation phases in `docs/PLAN.md` build toward.
+Status: **implemented**. This described the target architecture while the phases in
+`docs/PLAN.md` were being built; it now describes what is there, with the notes below
+recording where the finished code diverged from the plan and why.
 
 ## High-level
 
@@ -89,8 +90,14 @@ frontend/src/
 ├── context/           # AuthContext (current user, role, token)
 ├── routes/            # route definitions + <ProtectedRoute role="MANAGER">
 ├── types/             # TS interfaces mirroring backend DTOs
-└── charts/            # chart components (library TBD in PLAN.md — Recharts by default)
+├── lib/               # small pure helpers (date/number formatting, week maths, keyed fetch)
+└── components/charts/ # ColumnChart, BarList, StackedBarList — no charting library
 ```
+
+The tree above is the plan; what actually got built is flatter. `hooks/` and `context/`
+never appeared — `auth/` holds the context, provider and `useAuth` together, which is
+where you'd look for them anyway — and `charts/` lives under `components/` since the three
+charts are presentation-only like every other component there.
 
 Key decisions:
 - **Auth state**: JWT stored client-side (kept in memory + `localStorage` for
@@ -103,6 +110,11 @@ Key decisions:
   before submit; backend validation is still authoritative.
 - **Styling**: Tailwind CSS utility classes; shared primitives (buttons, inputs, badges)
   factored into `components/` rather than repeated per page.
+- **Charts: no charting library.** See the decision below.
+- **URL as filter state** on the team dashboard: every filter, the selected week and the
+  page number live in the query string rather than in component state, so a filtered view
+  is shareable, the Back button means something, and a summary tile can be an ordinary
+  link into the same page with a filter applied.
 
 ## Auth flow (JWT)
 
@@ -131,9 +143,39 @@ to the user-management page (invite/remove team members, assign roles). No separ
 `ADMIN` role — introducing one would be extra scope beyond what's asked, not a
 requirement.
 
+## Decided: charts without a charting library
+
+Recharts was the recorded default. Phase 6 went the other way: the four dashboard datasets
+are each "a label and a number", and a div whose width or height is a percentage renders
+exactly that. `components/charts/` holds three components — `ColumnChart` (the weekly
+trend), `BarList` (hours per project, hours per task type) and `StackedBarList` (each
+member's reports by status) — totalling well under 200 lines.
+
+Why that was the better trade here:
+
+- It would have been the frontend's largest dependency, and the only one added since the
+  scaffold. The **live-coding round asks about code in this repo**, so a chart the author
+  can explain line by line is worth more than one configured through a library's props.
+- CSS percentages are genuinely responsive. A scaled SVG `viewBox` shrinks its own text,
+  so axis labels become illegible on a phone — and mobile responsiveness is a graded
+  requirement.
+- Zero risk around React 19 peer ranges, which are still uneven across chart libraries.
+
+If the charts ever need axes, zooming, tooltips positioned off-element, or a chart type
+that isn't bars, add Recharts then — that is the point at which a library starts paying
+for itself. Nothing about the current code makes the swap harder: each chart takes a plain
+array and is used in exactly one place.
+
+## Note: 400 before 403 on manager-only writes
+
+A team member POSTing an **invalid** body to a manager-only endpoint gets 400, not 403.
+Spring resolves and validates `@RequestBody` while binding the method arguments, which
+happens before the method-security interceptor runs. With a **valid** body the same
+request is 403, and nothing is ever written either way — verified for every write endpoint
+in Phase 6. It discloses the endpoint's validation shape, not any data, so it is left as
+is rather than reordered.
+
 ## Open questions / things to confirm before or during implementation
 
-- Charting library: default plan is **Recharts** (simple, React-idiomatic); ECharts is
-  the alternative if you want more chart variety.
 - Whether the AI Chat Assistant bonus gets attempted, and if so which LLM/integration
   approach.

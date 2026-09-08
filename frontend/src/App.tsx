@@ -1,12 +1,17 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { AuthPage } from './pages/AuthPage'
+import { MemberProfilePage } from './pages/MemberProfilePage'
 import { MyReportsPage } from './pages/MyReportsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { ProjectsPage } from './pages/ProjectsPage'
 import { ReportDetailPage } from './pages/ReportDetailPage'
 import { ReportFormPage } from './pages/ReportFormPage'
+import { ReviewPage } from './pages/ReviewPage'
+import { SectionComparePage } from './pages/SectionComparePage'
 import { TeamDashboardPage } from './pages/TeamDashboardPage'
+import { UsersPage } from './pages/UsersPage'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 
 export default function App() {
@@ -37,6 +42,12 @@ export default function App() {
           {/* Manager-only. The backend enforces this too - this only decides what renders. */}
           <Route element={<ProtectedRoute role="MANAGER" />}>
             <Route path="/team" element={<TeamDashboardPage />} />
+            {/* Declared before /team/:userId so "sections" is matched as a literal. */}
+            <Route path="/team/sections" element={<SectionComparePage />} />
+            <Route path="/team/:userId" element={<MemberProfilePage />} />
+            <Route path="/review/:reportId" element={<ReviewPage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/admin/users" element={<UsersPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

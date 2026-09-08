@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { listProjects } from '../api/projects'
-import { createReport, getReport, submitReport, updateReport } from '../api/reports'
+import {
+  createReport,
+  getReport,
+  listMyReports,
+  submitReport,
+  updateReport,
+} from '../api/reports'
 import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { Card, PageHeader } from '../components/Card'
@@ -23,7 +29,7 @@ import {
 import type { FieldErrors, ReportFormState } from '../features/reports/reportFormState'
 import { currentMonday, mondayOf, weekEndOf } from '../lib/week'
 import { formatWeek } from '../lib/format'
-import type { ProjectSummary, ReportDetail } from '../types/api'
+import type { ProjectSummary, ReportDetail, ReportSummary } from '../types/api'
 
 /** Serves both /reports/new and /reports/:id/edit — the field set is identical either way. */
 export function ReportFormPage() {
@@ -39,6 +45,9 @@ export function ReportFormPage() {
   const [banner, setBanner] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  // The report already filed for the week just attempted, looked up after a 409 so the
+  // member can open it instead of hunting for it in their history.
+  const [conflict, setConflict] = useState<ReportSummary | null>(null)
 
   useEffect(() => {
     let active = true
@@ -72,6 +81,34 @@ export function ReportFormPage() {
 
   function patch(next: Partial<ReportFormState>) {
     setForm((current) => ({ ...current, ...next }))
+  }
+
+  /**
+   * A duplicate week comes back as a 409 carrying no `fieldErrors`, so the default path
+   * would show it as a banner detached from the field it is about. Put it on the week input
+   * and look the existing report up, so "you already have one" comes with a way to open it.
+   */
+  async function handleSaveError(caught: unknown, fallback: string) {
+    if (!(caught instanceof ApiError)) {
+      setBanner(fallback)
+      return
+    }
+
+    const isDuplicateWeek =
+      !isEdit && caught.status === 409 && Object.keys(caught.fieldErrors).length === 0
+    if (!isDuplicateWeek) {
+      applyServerErrors(caught)
+      return
+    }
+
+    setErrors({ weekStart: caught.message })
+    setBanner(null)
+    try {
+      const page = await listMyReports({ weekStart: mondayOf(form.weekStart), size: 1 })
+      setConflict(page.content[0] ?? null)
+    } catch {
+      // The inline message is still correct on its own; only the shortcut is lost.
+    }
   }
 
   /** Turns a backend fieldErrors map into our dotted keys where it lines up. */
@@ -109,8 +146,7 @@ export function ReportFormPage() {
       const saved = await persist()
       if (saved) navigate(`/reports/${saved.id}`)
     } catch (caught) {
-      if (caught instanceof ApiError) applyServerErrors(caught)
-      else setBanner('Could not save this report.')
+      await handleSaveError(caught, 'Could not save this report.')
     } finally {
       setSaving(false)
     }
@@ -121,7 +157,7 @@ export function ReportFormPage() {
     const completeness = validateForSubmit(form)
     if (Object.keys(completeness).length > 0) {
       setErrors((current) => ({ ...current, ...completeness }))
-      setBanner('Add at least one task and fill in next week&apos;s plan before submitting.')
+      setBanner('Add at least one task and fill in next week’s plan before submitting.')
       return
     }
 
@@ -132,8 +168,7 @@ export function ReportFormPage() {
       await submitReport(saved.id)
       navigate(`/reports/${saved.id}`)
     } catch (caught) {
-      if (caught instanceof ApiError) applyServerErrors(caught)
-      else setBanner('Could not submit this report.')
+      await handleSaveError(caught, 'Could not submit this report.')
     } finally {
       setSaving(false)
     }
@@ -205,13 +240,28 @@ export function ReportFormPage() {
                   type="date"
                   value={form.weekStart}
                   error={errors.weekStart}
-                  onChange={(event) => patch({ weekStart: event.target.value })}
+                  onChange={(event) => {
+                    // Picking a different week retracts both the shortcut and the message:
+                    // each of them named the week that was just replaced.
+                    setConflict(null)
+                    setErrors(({ weekStart: _cleared, ...rest }) => rest)
+                    patch({ weekStart: event.target.value })
+                  }}
                 />
-                {weekStartMonday && (
-                  <p className="mt-1.5 text-xs text-ink-500">
-                    Covers {formatWeek(weekStartMonday, weekEndOf(weekStartMonday))} — any day in
-                    the week works.
-                  </p>
+                {conflict ? (
+                  <Link
+                    to={`/reports/${conflict.id}`}
+                    className="mt-1.5 inline-block text-xs font-medium text-brand-300 transition hover:text-brand-200"
+                  >
+                    Open your existing report for this week →
+                  </Link>
+                ) : (
+                  weekStartMonday && (
+                    <p className="mt-1.5 text-xs text-ink-500">
+                      Covers {formatWeek(weekStartMonday, weekEndOf(weekStartMonday))} — any day
+                      in the week works.
+                    </p>
+                  )
                 )}
               </div>
             )}
