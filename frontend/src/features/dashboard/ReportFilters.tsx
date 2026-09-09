@@ -1,4 +1,4 @@
-import { mondayOf } from '../../lib/week'
+import { WeekField } from '../../components/WeekField'
 import { EMPTY_FILTERS, isFiltered } from './reportFilterState'
 import type { TeamReportFilterValue } from './reportFilterState'
 import type { ProjectDetail, ReportStatus, UserDetail } from '../../types/api'
@@ -115,27 +115,25 @@ export function ReportFilters({
           </select>
         </label>
 
-        <label>
-          <span className={labelClass}>Weeks from</span>
-          <input
-            type="date"
-            value={value.weekFrom}
-            onChange={(event) =>
-              onChange({ ...value, weekFrom: mondayOf(event.target.value) })
-            }
-            className={selectClass}
-          />
-        </label>
+        {/* Clearable, because "no lower bound" and "no upper bound" are real choices here -
+            unlike the dashboard's own week, which always has to be some week. */}
+        <WeekField
+          label="Weeks from"
+          value={value.weekFrom}
+          onChange={(monday) => onChange({ ...value, weekFrom: monday })}
+          clearable
+          size="sm"
+          labelClassName={labelClass}
+        />
 
-        <label>
-          <span className={labelClass}>Weeks to</span>
-          <input
-            type="date"
-            value={value.weekTo}
-            onChange={(event) => onChange({ ...value, weekTo: mondayOf(event.target.value) })}
-            className={selectClass}
-          />
-        </label>
+        <WeekField
+          label="Weeks to"
+          value={value.weekTo}
+          onChange={(monday) => onChange({ ...value, weekTo: monday })}
+          clearable
+          size="sm"
+          labelClassName={labelClass}
+        />
       </div>
 
       <div className="mt-3.5 flex flex-wrap items-center gap-2">

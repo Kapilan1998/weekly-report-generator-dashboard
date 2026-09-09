@@ -14,7 +14,7 @@ import { Button } from '../components/Button'
 import { Card, PageHeader } from '../components/Card'
 import { SelectField } from '../components/SelectField'
 import { TextAreaField } from '../components/TextAreaField'
-import { TextField } from '../components/TextField'
+import { WeekField } from '../components/WeekField'
 import { CorrectionBanner } from '../features/reports/CorrectionBanner'
 import { FlaggableList } from '../features/reports/FlaggableList'
 import { HoursGrid } from '../features/reports/HoursGrid'
@@ -234,18 +234,17 @@ export function ReportFormPage() {
               </div>
             ) : (
               <div>
-                <TextField
+                <WeekField
                   label="Week"
-                  name="weekStart"
-                  type="date"
+                  id="weekStart"
                   value={form.weekStart}
                   error={errors.weekStart}
-                  onChange={(event) => {
+                  onChange={(monday) => {
                     // Picking a different week retracts both the shortcut and the message:
                     // each of them named the week that was just replaced.
                     setConflict(null)
                     setErrors(({ weekStart: _cleared, ...rest }) => rest)
-                    patch({ weekStart: event.target.value })
+                    patch({ weekStart: monday })
                   }}
                 />
                 {conflict ? (
@@ -258,8 +257,7 @@ export function ReportFormPage() {
                 ) : (
                   weekStartMonday && (
                     <p className="mt-1.5 text-xs text-ink-500">
-                      Covers {formatWeek(weekStartMonday, weekEndOf(weekStartMonday))} — any day
-                      in the week works.
+                      Covers {formatWeek(weekStartMonday, weekEndOf(weekStartMonday))}.
                     </p>
                   )
                 )}
