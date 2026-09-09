@@ -248,7 +248,7 @@ export function TeamDashboardPage() {
               <select
                 value={weeks}
                 onChange={(event) => writeParams({ weeks: Number(event.target.value) })}
-                className="rounded-lg bg-navy-800 px-3 py-2 text-sm text-ink-100 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 focus:ring-2 focus:ring-inset focus:ring-brand-400 focus:outline-none"
+                className="rounded-lg bg-navy-800 py-2 pl-3 pr-9 text-sm text-ink-100 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 focus:ring-2 focus:ring-inset focus:ring-brand-400 focus:outline-none"
               >
                 {WEEK_WINDOWS.map((option) => (
                   <option key={option} value={option}>
