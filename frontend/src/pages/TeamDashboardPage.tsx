@@ -17,6 +17,7 @@ import { WeekPicker } from '../features/dashboard/WeekPicker'
 import { WeekStatusPanel } from '../features/dashboard/WeekStatusPanel'
 import { EMPTY_FILTERS, isFiltered } from '../features/dashboard/reportFilterState'
 import type { TeamReportFilterValue } from '../features/dashboard/reportFilterState'
+import { WeekSummaryCard } from '../features/assistant/WeekSummaryCard'
 import { ReportTable } from '../features/reports/ReportTable'
 import { fresh, settled } from '../lib/keyed'
 import type { Keyed } from '../lib/keyed'
@@ -283,6 +284,8 @@ export function TeamDashboardPage() {
           </Card>
         )
       )}
+
+      <WeekSummaryCard week={week} />
 
       <div className="grid gap-3 lg:grid-cols-2">
         <Card>
