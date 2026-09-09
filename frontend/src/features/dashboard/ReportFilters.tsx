@@ -26,7 +26,7 @@ const STATUSES: { value: ReportStatus; label: string; on: string }[] = [
 ]
 
 const selectClass =
-  'mt-1.5 w-full rounded-lg bg-navy-900/70 px-3 py-2 text-sm text-ink-100 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 focus:ring-2 focus:ring-inset focus:ring-brand-400 focus:outline-none'
+  'mt-1.5 w-full truncate rounded-lg bg-navy-900/70 py-2 pl-3 pr-9 text-sm text-ink-100 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 focus:ring-2 focus:ring-inset focus:ring-brand-400 focus:outline-none'
 const labelClass = 'block text-xs font-semibold tracking-wide text-ink-500 uppercase'
 
 export function ReportFilters({
