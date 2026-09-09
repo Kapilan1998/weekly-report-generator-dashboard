@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -148,6 +149,8 @@ class RoleBasedAccessControlTest {
                 "/api/dashboard/summary?weekStart=" + currentMonday(),
                 "/api/dashboard/charts?weekStart=" + currentMonday(),
                 "/api/dashboard/activity",
+                // The AI assistant reaches across the whole team, so it is gated identically.
+                "/api/assistant/status",
         };
 
         for (String path : paths) {
@@ -193,6 +196,20 @@ class RoleBasedAccessControlTest {
                         .content("{\"comment\":\"let me review my own report\"}"))
                 .andExpect(status().isForbidden());
 
+        // The assistant is manager-only for the same reason the dashboard is: it answers
+        // questions about everyone's reports. Bodies are valid so method security is what
+        // rejects these, not bean validation.
+        mockMvc.perform(post("/api/assistant/chat")
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"What is the team working on?\",\"history\":[]}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/assistant/summary")
+                        .header("Authorization", bearer(aliceToken))
+                        .param("weekStart", currentMonday().toString()))
+                .andExpect(status().isForbidden());
+
         // Nothing was created by any of the above.
         assertThat(projectRepository.findAllByOrderByNameAsc())
                 .extracting(Project::getName)
@@ -207,6 +224,87 @@ class RoleBasedAccessControlTest {
         mockMvc.perform(get("/api/reports")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/reports/mine").header("Authorization", "Bearer not-a-token"))
                 .andExpect(status().isUnauthorized());
+        // Editing your own account still requires being signed in as someone.
+        mockMvc.perform(put("/api/profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Nobody\",\"email\":\"nobody@test.local\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /**
+     * The profile endpoints are the one place a team member may write to a {@code users} row,
+     * so both halves of that need pinning: the endpoint must be reachable by a member, and it
+     * must not be a second way to do what {@code /api/users} exists to control.
+     */
+    @Test
+    @DisplayName("a team member can edit their own profile but cannot promote themselves through it")
+    void profileEditingIsSelfServiceButNotAWayToChangeRole() throws Exception {
+        // Reachable by a team member - the endpoints deliberately carry no role gate.
+        mockMvc.perform(put("/api/profile")
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Alice Renamed\",\"email\":\"alice@test.local\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Alice Renamed"))
+                // Still a team member, and a newly signed token comes back because the JWT's
+                // subject is the email address.
+                .andExpect(jsonPath("$.role").value("TEAM_MEMBER"))
+                .andExpect(jsonPath("$.token").isString());
+
+        // A role field in the body is refused outright rather than ignored:
+        // fail-on-unknown-properties turns it into a 400. Ignoring it would be safe today and
+        // one careless DTO change away from a privilege escalation.
+        mockMvc.perform(put("/api/profile")
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Alice Escalator","email":"alice@test.local",
+                                 "role":"MANAGER"}"""))
+                .andExpect(status().isBadRequest());
+
+        // Neither request changed the role on the row.
+        User reloaded = userRepository.findByEmail("alice@test.local").orElseThrow();
+        assertThat(reloaded.getRole()).isEqualTo(Role.TEAM_MEMBER);
+        assertThat(reloaded.getName()).isEqualTo("Alice Renamed");
+
+        // And a member still cannot take another account's address.
+        mockMvc.perform(put("/api/profile")
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Alice Member\",\"email\":\"bob@test.local\"}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("a wrong current password is 400, so a typo does not end the session")
+    void wrongCurrentPasswordIsBadRequestNotUnauthorized() throws Exception {
+        mockMvc.perform(put("/api/profile/password")
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"not-my-password\",\"newPassword\":\"Str0ng!New\"}"))
+                .andExpect(status().isBadRequest());
+
+        // The token is untouched by the failure, which is the behaviour the status protects:
+        // the frontend signs the user out on any 401.
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isOk());
+
+        // With the right one it goes through, and the old password stops working.
+        mockMvc.perform(put("/api/profile/password")
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"" + PASSWORD + "\",\"newPassword\":\"Str0ng!New\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"alice@test.local\",\"password\":\"" + PASSWORD + "\"}"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"alice@test.local\",\"password\":\"Str0ng!New\"}"))
+                .andExpect(status().isOk());
     }
 
     // ---- regressions worth keeping nailed down ----
