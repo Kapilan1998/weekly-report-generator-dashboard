@@ -1,0 +1,18 @@
+# Template for local configuration and secrets. Copy it, then edit the copy:
+#
+#   cp config/application.properties.example config/application.properties
+#
+# The copy is gitignored. THIS FILE IS COMMITTED, so it must never hold a real value.
+#
+
+# --- Google Gemini (AI chat assistant) ----------------------------------------------
+# Optional. With no key the assistant reports itself as not configured and the rest of the
+# application runs normally. Get a free key at https://aistudio.google.com -> "Get API key".
+#
+# This is the one genuine secret here: it is tied to your Google account and its quota, so
+# it must never be committed. That is the whole reason this file is gitignored.
+app.gemini.api-key=PASTE_YOUR_KEY_HERE
+
+# Confirm what your key can actually reach before changing this - model ids get renamed:
+#   curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY"
+app.gemini.model=gemini-3.1-flash-lite

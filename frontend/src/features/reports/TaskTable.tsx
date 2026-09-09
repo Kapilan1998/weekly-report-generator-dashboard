@@ -44,21 +44,46 @@ export function TaskTable({ rows, errors, disabled = false, onChange }: TaskTabl
         {errors.tasks && <p className="text-xs font-medium text-red-300">{errors.tasks}</p>}
       </div>
 
-      {/* Eight columns cannot fit a phone, so the table scrolls inside its own container
-          rather than forcing the page to scroll sideways. */}
-      <div className="overflow-x-auto rounded-lg ring-1 ring-white/10">
-        <table className="min-w-[56rem] border-collapse text-sm">
+      {/*
+        Eight columns cannot fit a phone, so the table scrolls inside its own container rather
+        than forcing the page to scroll sideways. overscroll-x-contain keeps that swipe from
+        chaining into the browser's own back gesture once the table hits its end.
+      */}
+      <div className="overflow-x-auto overscroll-x-contain rounded-lg ring-1 ring-white/10">
+        {/*
+          min-w-[78rem] is the sum of the nine column minimums declared on the header cells
+          below (77.5rem, rounded up), and it has to be kept in step with them. Auto table
+          layout distributes whatever width it is given, so when the columns need more than
+          the table's stated minimum it takes the difference out of whichever columns did not
+          declare one. That is exactly how this broke: six columns declared widths totalling
+          58rem against a 56rem table, and the two that declared nothing - Priority and
+          Status - were squeezed narrower than the words "Medium" and "Not started", down to
+          a clipped "M" and a bare chevron.
+        */}
+        {/*
+          Auto layout, not table-fixed: fixed layout sizes columns from `width` on the first
+          row and ignores `min-width`, which is exactly the floor these columns need. Auto
+          layout treats each min-width as a floor and then shares any width beyond the sum
+          proportionally, so the columns cannot be crushed on a phone and the table still
+          fills the card on a wide screen.
+        */}
+        <table className="min-w-[78rem] border-collapse text-sm">
           <thead className="bg-navy-700/50 text-left text-xs font-semibold tracking-wide text-ink-500 uppercase">
+            {/*
+              Every width lives here and nowhere else, so the sum above can be checked against
+              one row. Each is sized for its widest real content, not its header: Priority for
+              "Medium", Status for "Not started", the hour columns for "999.99".
+            */}
             <tr>
-              <th className="px-3 py-2.5 font-semibold">Task name</th>
-              <th className="px-3 py-2.5 font-semibold">Priority</th>
-              <th className="px-3 py-2.5 font-semibold">Planned %</th>
-              <th className="px-3 py-2.5 font-semibold">Actual %</th>
-              <th className="px-3 py-2.5 font-semibold">Status</th>
-              <th className="px-3 py-2.5 font-semibold">Time planned (h)</th>
-              <th className="px-3 py-2.5 font-semibold">Time spent (h)</th>
-              <th className="px-3 py-2.5 font-semibold">Output / deliverable</th>
-              <th className="px-3 py-2.5">
+              <th className="min-w-48 px-3 py-2.5 font-semibold">Task name</th>
+              <th className="min-w-36 px-3 py-2.5 font-semibold">Priority</th>
+              <th className="min-w-28 px-3 py-2.5 font-semibold">Planned %</th>
+              <th className="min-w-28 px-3 py-2.5 font-semibold">Actual %</th>
+              <th className="min-w-44 px-3 py-2.5 font-semibold">Status</th>
+              <th className="min-w-32 px-3 py-2.5 font-semibold">Time planned (h)</th>
+              <th className="min-w-32 px-3 py-2.5 font-semibold">Time spent (h)</th>
+              <th className="min-w-48 px-3 py-2.5 font-semibold">Output / deliverable</th>
+              <th className="w-14 px-3 py-2.5">
                 <span className="sr-only">Remove</span>
               </th>
             </tr>
@@ -68,7 +93,7 @@ export function TaskTable({ rows, errors, disabled = false, onChange }: TaskTabl
               // Keyed by a client-generated id: the backend replaces child rows on every
               // save, so a server id would change each time and remount the row.
               <tr key={row.key} className="align-top">
-                <td className="min-w-56 px-3 py-2">
+                <td className="px-3 py-2">
                   <TextField
                     label={`Task name, row ${index + 1}`}
                     name={`task-${index}-taskName`}
@@ -98,7 +123,7 @@ export function TaskTable({ rows, errors, disabled = false, onChange }: TaskTabl
                     ))}
                   </SelectField>
                 </td>
-                <td className="w-28 px-3 py-2">
+                <td className="px-3 py-2">
                   <TextField
                     label={`Planned percent, row ${index + 1}`}
                     name={`task-${index}-plannedPercent`}
@@ -114,7 +139,7 @@ export function TaskTable({ rows, errors, disabled = false, onChange }: TaskTabl
                     onChange={(event) => updateRow(index, { plannedPercent: event.target.value })}
                   />
                 </td>
-                <td className="w-28 px-3 py-2">
+                <td className="px-3 py-2">
                   <TextField
                     label={`Actual percent, row ${index + 1}`}
                     name={`task-${index}-actualPercent`}
@@ -148,7 +173,7 @@ export function TaskTable({ rows, errors, disabled = false, onChange }: TaskTabl
                     ))}
                   </SelectField>
                 </td>
-                <td className="w-32 px-3 py-2">
+                <td className="px-3 py-2">
                   <TextField
                     label={`Time planned, row ${index + 1}`}
                     name={`task-${index}-timePlannedHours`}
@@ -164,7 +189,7 @@ export function TaskTable({ rows, errors, disabled = false, onChange }: TaskTabl
                     onChange={(event) => updateRow(index, { timePlannedHours: event.target.value })}
                   />
                 </td>
-                <td className="w-32 px-3 py-2">
+                <td className="px-3 py-2">
                   <TextField
                     label={`Time spent, row ${index + 1}`}
                     name={`task-${index}-timeSpentHours`}
@@ -180,7 +205,7 @@ export function TaskTable({ rows, errors, disabled = false, onChange }: TaskTabl
                     onChange={(event) => updateRow(index, { timeSpentHours: event.target.value })}
                   />
                 </td>
-                <td className="min-w-56 px-3 py-2">
+                <td className="px-3 py-2">
                   <TextField
                     label={`Output or deliverable, row ${index + 1}`}
                     name={`task-${index}-outputDeliverable`}

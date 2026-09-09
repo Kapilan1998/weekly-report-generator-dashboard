@@ -39,7 +39,7 @@ npm run lint         # oxlint
 src/
 ├── api/                # one module per backend area; client.ts is the only place fetch happens
 ├── auth/               # AuthProvider (token + user), useAuth hook, context
-├── components/         # reusable UI: Layout, Button, TextField, Alert, StatusBadge, Pagination
+├── components/         # reusable UI: Layout, Button, TextField, WeekField, Alert, StatusBadge
 │   └── charts/         # ColumnChart, BarList, StackedBarList - CSS bars, no chart library
 ├── features/           # domain modules: reports/ (form state, task table, version history),
 │                       # dashboard/ (tiles, charts, filters, week picker, activity feed)
@@ -60,6 +60,14 @@ Two conventions that are load-bearing rather than stylistic:
 - **The team dashboard keeps every filter in the URL**, not in component state. That makes a
   filtered view shareable, gives the Back button meaning, and is what lets a summary tile be
   an ordinary link that arrives with its filter already applied.
+- **Weeks are picked with `components/WeekField.tsx`, not `<input type="date">`.** Two
+  reasons, and the second is the one that matters. Chrome paints its date popup outside the
+  document, so no stylesheet can reach it: on this dark theme it opens as a white panel in
+  the browser's own blue. And a date input offers a *day* when every one of these fields
+  wants a *week* — each caller used to pipe the value through `mondayOf` and discard the day.
+  `WeekField` selects whole Monday–Sunday rows, so the normalisation the old control hid is
+  now what the widget visibly does. It renders through a portal to escape `Card`'s
+  `overflow-hidden` and the settled `transform` that `animate-fade-up` leaves behind.
 
 `src/types/api.ts` is kept in sync with the backend DTOs **by hand** — change a DTO there
 and change it here.

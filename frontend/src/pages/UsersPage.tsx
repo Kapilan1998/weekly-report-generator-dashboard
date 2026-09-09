@@ -313,7 +313,7 @@ export function UsersPage() {
                               onChange={(event) =>
                                 save(account, { role: event.target.value as Role })
                               }
-                              className="rounded-lg bg-navy-900/70 px-2.5 py-1.5 text-xs text-ink-100 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 focus:ring-2 focus:ring-inset focus:ring-brand-400 focus:outline-none disabled:opacity-50"
+                              className="rounded-lg bg-navy-900/70 py-1.5 pl-2.5 pr-8 text-xs text-ink-100 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 focus:ring-2 focus:ring-inset focus:ring-brand-400 focus:outline-none disabled:opacity-50"
                             >
                               <option value="TEAM_MEMBER">Team member</option>
                               <option value="MANAGER">Manager</option>

@@ -358,9 +358,117 @@ exact code these tests are about.
 `org.springframework.boot.test.autoconfigure.web.servlet` to
 `org.springframework.boot.webmvc.test.autoconfigure`.
 
+## Follow-up — self-service profile editing ✅ done (branch `feature/ai-assistant`)
+
+`/profile` used to be read-only and said so: there was no endpoint for "change my own name or
+password", because `/api/users` is manager-only. There is one now.
+
+- [x] `PUT /api/profile` — own name and email
+- [x] `PUT /api/profile/password` — own password, current password required
+- [x] `ProfileService` + `ProfileController`, `ProfileServiceTest` (11) and
+      `ProfileControllerTest` (6), plus 2 integration tests in `RoleBasedAccessControlTest`
+- [x] Frontend: `api/profile.ts`, `features/profile/EditProfileForm`,
+      `features/profile/ChangePasswordForm`, wired into `ProfilePage`
+
+**A separate controller, not a `/me` path on `UserController`.** That class carries
+`@PreAuthorize("hasRole('MANAGER')")` at the class level, so anything added to it would be
+manager-only and a team member could not edit their own name. The two also have opposite
+subjects — `/api/users` acts on *other people's* accounts, `/api/profile` only ever on your
+own — and `ProfileControllerTest` asserts the absence of a class-level role gate, so copying
+that annotation across fails a test rather than silently removing the feature.
+
+**Both endpoints return a whole `AuthResponse`, and the client must call `signIn` with it.**
+The JWT's subject is the email (`JwtService.generateToken`). Change the email and the token in
+the caller's hands names a user that no longer resolves, so their next request 401s and the
+client signs them out — editing your email would look like being logged out at random.
+Returning a freshly signed token is what prevents that. Verified live: after an email change,
+`/reports` still loads.
+
+**A wrong current password is 400, not 401.** `api/client.ts` runs the unauthorized handler on
+any 401, so the obvious status would end the session over a typo in a form field. There is a
+test on the status specifically, in the service test and again in the RBAC suite.
+
+**Two things the endpoint deliberately cannot do.** `UpdateProfileRequest` has no role
+component, and `fail-on-unknown-properties=true` means sending one is a 400 rather than a
+silently ignored field — a team member must not be able to promote themselves through an
+endpoint every signed-in user can reach. And the uniqueness check is skipped when the
+normalised email is unchanged; without that, the row collides with itself and every plain
+rename returns 409.
+
+**Not done, on purpose:** a password change does not end sessions on the account's other
+devices. Tokens are stateless and carry no version, so revoking them needs a token version on
+the user row checked in `JwtAuthFilter`. The page says so rather than implying otherwise.
+
+## Follow-up — week picker ✅ done (branch `feature/ai-assistant`)
+
+- [x] `components/WeekField.tsx` replaces `<input type="date">` in all four places a week is
+      chosen: the report form, the dashboard header, and both ends of the filter range
+
+**Chrome's date popup cannot be themed.** It is painted by the browser outside the document,
+so on this dark theme it opened as a white panel in the browser's own blue — no stylesheet
+can reach it. That alone forces a custom control if the picker is to match the app.
+
+**It picks a week, which is what the app stores.** A date input offers a day; all four callers
+piped the value through `mondayOf` and threw the day away. Each row in `WeekField` is one
+Monday–Sunday week: hovering lights the whole row, clicking anywhere in it selects that week.
+The normalisation the native input hid behind a silent snap is now the visible behaviour of
+the widget.
+
+**Rendered through a portal, for clipping rather than stacking.** `Card` sets
+`overflow-hidden` for its rounded corners, and `animate-fade-up` leaves a settled `transform`
+on the section wrapper — a transformed ancestor becomes the containing block for
+`position: fixed`, so even fixed positioning would be trapped inside the card. A portal to
+`document.body` has neither ancestor. Verified in the hardest case: the report form's field
+is inside a `Card` inside an animated section, and the panel escapes both.
+
+**Two pieces of state, not one.** The visible month and the focused week move independently.
+Deriving the month from the focused week looks tempting and is wrong: stepping a month back
+from 3 Oct gives 3 Sep, whose Monday is 31 Aug, so the grid would jump to August and skip
+September. Arrow keys move by week and pull the month along when focus walks off the grid.
+
+Keyboard: `↓` on the trigger opens, `↑↓←→` move by week, `PageUp`/`PageDown` by month, `Home`
+jumps to the current week, `Enter` selects, `Escape` closes — focus returns to the trigger
+either way. A roving tabindex keeps the grid to one tab stop instead of six.
+
 ## Phase 9 — Bonus (optional, do last)
-- [ ] AI Chat Assistant (LLM choice + integration approach TBD — document prompt design
-      and data-privacy considerations if built)
+- [x] **AI Chat Assistant ✅ done** (branch `feature/ai-assistant`) — Gemini via function
+      calling. Full write-up in `docs/AI_ASSISTANT.md`, written to be lifted into the
+      presentation, which the brief requires for this feature.
+
+Both capabilities the brief lists: conversational Q&A (`POST /api/assistant/chat`, a
+tool-use loop) and a written weekly summary (`POST /api/assistant/summary`, a single call
+over a digest). Chat widget in the app shell, "Week in review" card on the dashboard.
+
+**Approach: tool use, not RAG.** Four read-only tools, each wrapping an existing service.
+Retrieval by similarity suits prose you cannot query; this data is relational and already has
+exact query paths, so embedding it would make precise questions answerable only
+approximately and add an index to keep in sync with every edit.
+
+**Authorization is inherited, not re-implemented.** `get_report_content` goes through
+`ReportService.getDetail` → `ReportAccessGuard`, so the assistant cannot read a peer's draft —
+verified live: it answers *"Report 2 is still a draft, so its content is private to its author"*.
+Had the tools reached for repositories directly, the assistant would have become a way to read
+what the API forbids.
+
+**No write tools, deliberately.** Report text enters the model's context as tool output, so a
+member could write "ignore your instructions" in a blocker. With no write tools the worst case
+is a wrong *answer*, never a wrong *action* — structural, not a filter.
+
+Three things found by testing rather than reading docs:
+- **Thought signatures.** Each `functionCall` part arrives with a sibling `thoughtSignature`
+  that must be echoed back verbatim, or the next request is a 400. A single-turn test never
+  reveals it. It is why the conversation is carried as opaque maps rather than typed records.
+- **No outer transaction.** A refused tool call throws inside a nested `@Transactional`
+  service, marking the *shared* transaction rollback-only — so catching it isn't enough and
+  the commit fails with `UnexpectedRollbackException`, turning a handled refusal into a 500.
+  It also avoids holding a pooled connection across model latency.
+- **Free tier is 20 requests per day per model.** Switching model resets it, since the quota
+  is per model. `gemini-2.5-flash` is retired for new users; settled on
+  `gemini-3.1-flash-lite`, pinned rather than a `-latest` alias so a recorded demo and a later
+  review behave the same.
+
+Optional throughout: with no key the status endpoint reports `configured: false`, the widget
+renders a disabled control explaining why, and the rest of the application is unaffected.
 - [ ] Deployment (publicly accessible instance)
 
 ## Phase 10 — Deliverables wrap-up

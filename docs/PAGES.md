@@ -26,9 +26,19 @@ separately in Section 4/6 but is effectively its own page) — comfortably over 
 is seed data (Phase 7), JUnit tests (Phase 8) and the deliverables wrap-up (Phase 10) —
 no page work.
 
-One gap worth knowing: there is no self-service profile editing. `/api/users` is
-manager-only and deliberately administers access rather than identity, so "change my own
-name or password" has no endpoint to call; `/profile` says so rather than showing a form
-that can't save.
+`/profile` is self-service: any signed-in user can edit their own name and email and change
+their own password, through `/api/profile` (`ProfileController`) — a separate controller from
+manager-only `/api/users`, which administers *access* rather than identity. Role stays
+read-only there, because nobody may change their own role.
+
+Two things about that page are load-bearing rather than cosmetic:
+
+- **Both endpoints return a whole `AuthResponse`, and the client must call `signIn` with it.**
+  The JWT's subject is the user's email, so after an email change the token already held names
+  an address that no longer resolves — the next request 401s and the client signs them out.
+  Swapping in the returned token is what prevents editing your email from looking like being
+  logged out at random.
+- **A wrong current password is 400, not 401.** `api/client.ts` runs the unauthorized handler
+  on any 401, so a 401 there would end the session over a typo in a form field.
 
 Update the Status column as pages get built (`not started` → `in progress` → `done`).

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { AssistantWidget } from '../features/assistant/AssistantWidget'
 import { UserMenu } from './UserMenu'
 
 const COLLAPSE_KEY = 'wrg.nav.collapsed'
@@ -299,6 +300,10 @@ export function Layout() {
           </div>
         </main>
       </div>
+
+      {/* In the shell rather than on a page, so a question doesn't cost you your place.
+          Renders nothing for a team member - the endpoints are manager-only. */}
+      <AssistantWidget />
     </div>
   )
 }

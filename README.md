@@ -21,6 +21,7 @@ Spring Boot 4 · Java 21 · MySQL 8 (Flyway) · React 19 · TypeScript · Tailwi
 | [`docs/PHASE2_SPEC.md`](docs/PHASE2_SPEC.md) | Report schema, endpoints, status codes, workflow rules |
 | [`docs/PAGES.md`](docs/PAGES.md) | Page-by-page inventory against the brief |
 | [`docs/PLAN.md`](docs/PLAN.md) | Phase-by-phase implementation log |
+| [`docs/AI_ASSISTANT.md`](docs/AI_ASSISTANT.md) | AI chat assistant: approach, prompt design, data privacy |
 | [`docs/diagrams/`](docs/diagrams/) | ER diagram as an image — PNG for slides, SVG for screen |
 
 ---
@@ -58,10 +59,25 @@ Start your local MySQL server. **There is no migration command to run by hand:**
 - **Demo data is loaded automatically** the first time the backend starts against an empty
   database — see [Demo accounts](#demo-accounts) below.
 
-Credentials live in
-`backend/weekly-report-backend/src/main/resources/application.properties` (`root` / `12345`).
-Change them there to match your MySQL setup. They are committed deliberately: it is a
-throwaway local development credential, not a secret.
+The defaults are `root` / `12345` on the standard port, committed deliberately — a
+throwaway local-MySQL credential, not a secret. **If your MySQL differs, don't edit the
+committed file.** Every value is an environment-variable placeholder, so override it
+instead:
+
+```powershell
+$env:DB_USERNAME = "your-user"
+$env:DB_PASSWORD = "your-password"
+```
+
+Or copy the template and put them in a gitignored file:
+
+```bash
+cd backend/weekly-report-backend
+cp config/application.properties.example config/application.properties
+```
+
+`config/application.properties` is gitignored and overrides the packaged config, so local
+changes never end up in a commit. The template lists every variable the application reads.
 
 ### 3. Running the backend
 
@@ -119,6 +135,9 @@ A five-minute tour that touches every requirement:
    resubmit to fork a new version.
 6. Back as **Maya** → *Compare sections* reads one section (blockers, achievements, …) across
    the whole team for a chosen week.
+7. If the AI assistant is configured: **Ask the assistant** (bottom right) answers questions
+   from the reports, and *Week in review* on the dashboard writes a summary of the week. Note
+   the small labels under each answer — they show which lookup the figures came from.
 
 ### Reloading the demo data
 
@@ -134,6 +153,42 @@ week is computed relative to the day you run it, so the dashboard always opens o
 week with something in it.
 
 To turn the loader off entirely, start the backend with `--app.seed.enabled=false`.
+
+---
+
+## Configuration and secrets
+
+Nothing needs configuring to run locally — every setting ships a working default. Two
+things matter if you go further than that:
+
+| Variable | Default | When you must set it |
+|---|---|---|
+| `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | local MySQL, `root` / `12345` | Your MySQL differs from the default |
+| `JWT_SECRET` | a committed placeholder | **Before any deployment** |
+| `GEMINI_API_KEY` | unset | To enable the AI assistant |
+| `GEMINI_MODEL` | `gemini-3.1-flash-lite` | To use a different model |
+
+Precedence, highest first: an OS environment variable, then
+`backend/weekly-report-backend/config/application.properties` (gitignored), then the
+committed defaults in `src/main/resources/application.properties`.
+
+**`JWT_SECRET` before deploying is the one that actually matters.** The committed default is
+a self-describing placeholder rather than a random-looking string, precisely so it can't be
+mistaken for a real secret — anyone who reads this repository could otherwise forge a token
+for any user, including a manager, against an instance still running it. Generate a fresh
+value of at least 32 bytes:
+
+```powershell
+[Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Max 256 }))
+```
+
+```bash
+openssl rand -base64 48
+```
+
+The Gemini key is the only genuine secret here — it's tied to a Google account and its
+quota. That's why `config/application.properties` is gitignored while its `.example`
+template is committed.
 
 ---
 
@@ -181,3 +236,7 @@ If you're reviewing this codebase, these are the parts where the design decision
   per version.
 - **Charts without a charting library** — `frontend/src/components/charts/`, and the decision
   recorded in `docs/ARCHITECTURE.md`.
+- **The AI assistant** — `assistant/AssistantTools.java`. Every tool wraps an existing service,
+  so the assistant inherits `ReportAccessGuard` and cannot read a peer's draft; and there are
+  no write tools at all, which is what makes prompt injection through report text a wrong
+  answer rather than a wrong action. Full reasoning in `docs/AI_ASSISTANT.md`.

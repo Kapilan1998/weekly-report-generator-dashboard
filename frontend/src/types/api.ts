@@ -319,3 +319,39 @@ export interface ActivityItem {
   comment: string | null
   at: string
 }
+
+// ---- AI chat assistant (optional feature) ----
+
+/** Asked before the widget renders, so an unconfigured deployment shows why rather than failing. */
+export interface AssistantStatus {
+  configured: boolean
+  model: string
+}
+
+/** `role` is whitelisted server-side to these two values — they are what the provider accepts. */
+export interface AssistantTurn {
+  role: 'user' | 'model'
+  text: string
+}
+
+export interface AssistantChatInput {
+  message: string
+  history: AssistantTurn[]
+}
+
+/**
+ * `toolsUsed` is shown in the UI on purpose: it is what makes an answer checkable. Seeing that
+ * a number came from `list_reports` rather than from the model's own recollection is the
+ * difference between a figure a manager can act on and one they have to go and verify.
+ */
+export interface AssistantChatResult {
+  reply: string
+  toolsUsed: string[]
+}
+
+export interface AssistantSummary {
+  weekStart: string
+  weekEnd: string
+  reportsIncluded: number
+  summary: string
+}

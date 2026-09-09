@@ -3,33 +3,45 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Surfaces: a genuinely blue navy, not neutral grey. Every large area uses one of these,
-     so the UI has no bright regions at all. */
-  --color-navy-950: #070c16; /* sidebar */
-  --color-navy-900: #0b1220; /* page background */
-  --color-navy-850: #0f1728;
-  --color-navy-800: #131c31; /* cards */
-  --color-navy-700: #1a2440; /* table headers, raised rows */
-  --color-navy-600: #24314f; /* borders */
-  --color-navy-500: #33415f; /* dividers, scrollbar thumb */
+  /* Surfaces: a deep ocean blue.
+     The earlier scale started at #0b1220, which is technically blue but so dark and so
+     desaturated that across a full-width page it read as plain black - the blue was only
+     visible where two surfaces met. This scale is lifted about two steps and carries more
+     saturation, so the blue is legible as a colour while the theme stays properly dark
+     (page luminance is still under 3%, so nothing here is a bright region).
 
-  /* Text, tinted slightly blue so it sits in the same family as the surfaces. */
-  --color-ink-100: #e7edfb;
-  --color-ink-300: #aebbd6;
-  --color-ink-500: #7f8dae;
+     The gap between 900 and 800 is what makes a card look raised, so keep it: bringing them
+     closer flattens every table and panel in the app. */
+  --color-navy-950: #0c1e36; /* deepest - drawer scrim, behind everything */
+  --color-navy-900: #13294a; /* page background */
+  --color-navy-850: #17304f;
+  --color-navy-800: #1d3a5c; /* cards */
+  --color-navy-700: #274a72; /* table headers, raised rows */
+  --color-navy-600: #33608e; /* borders */
+  --color-navy-500: #4276a8; /* dividers, scrollbar thumb */
 
-  /* Brand: indigo reads well on navy and stays clear of the status hues. */
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-200: #c7d2fe;
-  --color-brand-300: #a5b4fc;
-  --color-brand-400: #818cf8;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-brand-800: #3730a3;
-  --color-brand-900: #312e81;
-  --color-brand-950: #1e1b4b;
+  /* Text, tinted blue so it sits in the same family as the surfaces. Lifted slightly with
+     the surfaces: the old muted tones lost contrast once the background came up. */
+  --color-ink-100: #eaf1fd;
+  --color-ink-300: #b6c6df;
+  --color-ink-500: #8ba2c2;
+
+  /* Brand: indigo pushed brighter and further toward violet.
+     It had to move. The old #4f46e5 sat close in hue to the new blue surfaces, so buttons
+     were blue-on-blue and lost their separation. Violet keeps a clear boundary against both
+     the blue surfaces and the emerald navigation chrome, and stays clear of all four status
+     hues - emerald, sky, amber, red - which have to remain unambiguous. */
+  --color-brand-50: #f2f0ff;
+  --color-brand-100: #e6e2ff;
+  --color-brand-200: #cec7fe;
+  --color-brand-300: #b4a9fd;
+  --color-brand-400: #9a8bfb;
+  --color-brand-500: #7c6df7;
+  --color-brand-600: #6552ee;
+  --color-brand-700: #5340d4;
+  --color-brand-800: #4433ab;
+  --color-brand-900: #392c8a;
+  --color-brand-950: #241c5c;
 
   --animate-fade-up: fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-fade-in: fade-in 0.25s ease-out both;
@@ -107,6 +119,29 @@ body,
 body {
   @apply bg-navy-900 text-ink-100 antialiased;
   scrollbar-color: var(--color-navy-500) transparent;
+}
+
+/* Depth for the large empty areas: a page holding one small card was otherwise a flat slab.
+   One soft highlight from the top right is enough to imply a light source.
+
+   An emerald wash from the bottom left was tried first, to tie the open page back to the
+   green navigation. It was removed: at full width it spread across most of the empty area
+   and turned the blue muddy green, which defeats the point of having a blue surface at all.
+   The chrome carries the green; the page stays blue.
+
+   On a fixed pseudo-element rather than a background-attachment: fixed image, so it is
+   composited once and never repaints while scrolling. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(
+    60rem 32rem at 88% -12%,
+    color-mix(in oklab, var(--color-brand-400) 14%, transparent),
+    transparent 68%
+  );
 }
 
 ::selection {

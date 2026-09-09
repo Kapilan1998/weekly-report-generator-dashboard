@@ -8,8 +8,14 @@
  * changes, change it here too.
  */
 
-/** Parses a yyyy-MM-dd value from a date input without timezone drift. */
-function parseIsoDate(value: string): Date | null {
+/**
+ * Parses a yyyy-MM-dd value without timezone drift.
+ *
+ * Exported so `WeekField`'s calendar builds its grid with the same parser rather than a
+ * second one. `new Date(iso)` is the trap this avoids, and a calendar that lands a day out
+ * west of Greenwich is exactly the bug worth not writing twice.
+ */
+export function parseIsoDate(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
   if (!match) return null
   // Constructed in local time; `new Date('2026-03-04')` would parse as UTC and can land on
@@ -18,7 +24,7 @@ function parseIsoDate(value: string): Date | null {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-function toIsoDate(date: Date): string {
+export function toIsoDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${date.getFullYear()}-${month}-${day}`
@@ -46,4 +52,31 @@ export function weekEndOf(mondayIso: string): string {
 /** The Monday of the current week, for defaulting a new report. */
 export function currentMonday(): string {
   return mondayOf(toIsoDate(new Date()))
+}
+
+/** Any date shifted by whole days, in and out as yyyy-MM-dd. '' if unparseable. */
+export function addDaysIso(isoDate: string, days: number): string {
+  const date = parseIsoDate(isoDate)
+  if (!date) return ''
+  date.setDate(date.getDate() + days)
+  return toIsoDate(date)
+}
+
+/** Whole months, clamped by the Date API the same way a calendar's month nav should be. */
+export function addMonthsIso(isoDate: string, months: number): string {
+  const date = parseIsoDate(isoDate)
+  if (!date) return ''
+  // Set the day to the 1st first: stepping from the 31st into a 30-day month would
+  // otherwise roll forward into the month after the one asked for.
+  const day = date.getDate()
+  date.setDate(1)
+  date.setMonth(date.getMonth() + months)
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  date.setDate(Math.min(day, lastDay))
+  return toIsoDate(date)
+}
+
+/** Today, as yyyy-MM-dd in the viewer's own timezone. */
+export function todayIso(): string {
+  return toIsoDate(new Date())
 }

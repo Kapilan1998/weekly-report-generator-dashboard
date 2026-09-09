@@ -1,4 +1,4 @@
-import { mondayOf } from '../../lib/week'
+import { WeekField } from '../../components/WeekField'
 import { EMPTY_FILTERS, isFiltered } from './reportFilterState'
 import type { TeamReportFilterValue } from './reportFilterState'
 import type { ProjectDetail, ReportStatus, UserDetail } from '../../types/api'
@@ -26,7 +26,7 @@ const STATUSES: { value: ReportStatus; label: string; on: string }[] = [
 ]
 
 const selectClass =
-  'mt-1.5 w-full rounded-lg bg-navy-900/70 px-3 py-2 text-sm text-ink-100 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 focus:ring-2 focus:ring-inset focus:ring-brand-400 focus:outline-none'
+  'mt-1.5 w-full truncate rounded-lg bg-navy-900/70 py-2 pl-3 pr-9 text-sm text-ink-100 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 focus:ring-2 focus:ring-inset focus:ring-brand-400 focus:outline-none'
 const labelClass = 'block text-xs font-semibold tracking-wide text-ink-500 uppercase'
 
 export function ReportFilters({
@@ -115,27 +115,25 @@ export function ReportFilters({
           </select>
         </label>
 
-        <label>
-          <span className={labelClass}>Weeks from</span>
-          <input
-            type="date"
-            value={value.weekFrom}
-            onChange={(event) =>
-              onChange({ ...value, weekFrom: mondayOf(event.target.value) })
-            }
-            className={selectClass}
-          />
-        </label>
+        {/* Clearable, because "no lower bound" and "no upper bound" are real choices here -
+            unlike the dashboard's own week, which always has to be some week. */}
+        <WeekField
+          label="Weeks from"
+          value={value.weekFrom}
+          onChange={(monday) => onChange({ ...value, weekFrom: monday })}
+          clearable
+          size="sm"
+          labelClassName={labelClass}
+        />
 
-        <label>
-          <span className={labelClass}>Weeks to</span>
-          <input
-            type="date"
-            value={value.weekTo}
-            onChange={(event) => onChange({ ...value, weekTo: mondayOf(event.target.value) })}
-            className={selectClass}
-          />
-        </label>
+        <WeekField
+          label="Weeks to"
+          value={value.weekTo}
+          onChange={(monday) => onChange({ ...value, weekTo: monday })}
+          clearable
+          size="sm"
+          labelClassName={labelClass}
+        />
       </div>
 
       <div className="mt-3.5 flex flex-wrap items-center gap-2">

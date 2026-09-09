@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local secrets ###
+# Real API keys live here. Spring Boot loads ./config/application.properties
+# automatically and it overrides the packaged one, so no profile flag is needed.
+# The .example alongside it IS committed, as the template.
+config/application.properties
