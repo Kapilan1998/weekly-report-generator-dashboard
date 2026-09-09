@@ -31,10 +31,30 @@ Phases 1-5 and 3/3b are merged to `main`; Phase 6 is on branch `feature/manager-
 `AuthService.login` (it verifies the password directly). Miss one and disabling an account
 silently does nothing until the token expires.
 
-Phases 7 (seed data) and 8 (RBAC tests) are done too, as is the README/ER-diagram half of
-Phase 10. **Still to do:** Phase 9 (optional AI-chat bonus and deployment), and the parts of
+Phases 7 (seed data), 8 (RBAC tests) and the AI-chat half of Phase 9 are done too, as is the
+README/ER-diagram half of Phase 10. **Still to do:** deployment (optional), and the parts of
 Phase 10 only the user can do — slides, demo video, Drive folder — plus verifying the README
 against a genuinely clean checkout.
+
+### AI assistant (`assistant/` package, branch `feature/ai-assistant`)
+
+Read `docs/AI_ASSISTANT.md` before touching it. Four rules that are load-bearing:
+
+- **Every tool wraps an existing service**, never a repository. That is what makes the
+  assistant inherit `ReportAccessGuard` and refuse a peer's draft. A tool that queried
+  directly would silently bypass the guard.
+- **There are no write tools, and there must not be.** Report text reaches the model as tool
+  output, so injection is possible; with no write tools its worst outcome is a wrong answer
+  rather than a wrong action.
+- **`AssistantService` is not `@Transactional`, deliberately.** A refused tool call throws
+  inside a nested transactional service and marks the shared transaction rollback-only, so the
+  commit fails with `UnexpectedRollbackException` even though the exception was caught.
+- **Model turns are replayed verbatim.** Each `functionCall` part carries a `thoughtSignature`
+  that must be echoed or the next request 400s, which is why the conversation is opaque maps
+  rather than typed records.
+
+Free tier is **20 requests per day per model**, and one chat question costs two or more. The
+quota is per model, so switching model resets it. Model is pinned, not a `-latest` alias.
 
 ### Demo data and the test database
 
