@@ -35,7 +35,14 @@ export function SelectField({
         id={selectId}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`block w-full rounded-lg bg-navy-900/70 px-3 py-2.5 text-sm text-ink-100 ring-1 ring-inset transition focus:bg-navy-900 focus:ring-2 focus:ring-inset focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
+        // pr-9 rather than a symmetric px-3: the browser draws the dropdown arrow inside the
+        // right padding, so 12px there leaves it sitting on top of the selected value. The
+        // extra clearance is what makes the chosen option readable in a narrow column.
+        //
+        // truncate is the graceful-degradation half. A native select clips its text with no
+        // ellipsis, so a column that ever gets tighter than its content shows a bare chevron
+        // and looks broken rather than merely cramped.
+        className={`block w-full truncate rounded-lg bg-navy-900/70 py-2.5 pl-3 pr-9 text-sm text-ink-100 ring-1 ring-inset transition focus:bg-navy-900 focus:ring-2 focus:ring-inset focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
           labelHidden ? '' : 'mt-1.5'
         } ${
           error
