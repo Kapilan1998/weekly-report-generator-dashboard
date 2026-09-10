@@ -1,0 +1,99 @@
+erDiagram
+    users ||--o{ reports : "files"
+    users ||--o{ review_comments : "reviews as manager"
+    projects ||--o{ reports : "categorises"
+    reports ||--o{ report_versions : "keeps history of"
+    report_versions ||--o{ task_entries : "lists"
+    report_versions ||--o{ blockers : "lists"
+    report_versions ||--o{ achievements : "lists"
+    report_versions ||--o{ hours_entries : "breaks down"
+    report_versions ||--o{ review_comments : "was reviewed by"
+
+    users {
+        BIGINT id PK
+        VARCHAR_255 name
+        VARCHAR_255 email UK
+        VARCHAR_255 password_hash
+        VARCHAR_20 role "TEAM_MEMBER | MANAGER"
+        BIT_1 enabled "V3 - a retired account, kept for its authorship"
+        INT token_version "V4 - bumped to revoke this account's tokens"
+        DATETIME created_at
+    }
+
+    projects {
+        BIGINT id PK
+        VARCHAR_120 name UK
+        VARCHAR_500 description "nullable"
+        BIT_1 active "false retires it; reports still reference it"
+        DATETIME_6 created_at
+    }
+
+    reports {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT project_id FK
+        DATE week_start "UK with user_id - one report per user per week"
+        DATE week_end "always week_start + 6"
+        VARCHAR_20 status "DRAFT | SUBMITTED | NEEDS_CORRECTION | APPROVED"
+        DATETIME_6 last_submitted_at "nullable until first submit"
+        DATETIME_6 created_at
+        DATETIME_6 updated_at
+    }
+
+    report_versions {
+        BIGINT id PK
+        BIGINT report_id FK
+        INT version_number "UK with report_id"
+        VARCHAR_4000 tasks_planned_next_week "nullable"
+        VARCHAR_4000 notes "nullable"
+        VARCHAR_1000 links "nullable"
+        DATETIME_6 submitted_at "null while it is the open working copy"
+        DATETIME_6 created_at
+        DATETIME_6 updated_at
+    }
+
+    task_entries {
+        BIGINT id PK
+        BIGINT report_version_id FK
+        INT display_order
+        VARCHAR_255 task_name
+        VARCHAR_20 priority "LOW | MEDIUM | HIGH"
+        VARCHAR_20 status "NOT_STARTED | IN_PROGRESS | DONE | BLOCKED"
+        INT planned_percent "0-100"
+        INT actual_percent "0-100"
+        DECIMAL_5_2 time_planned_hours
+        DECIMAL_5_2 time_spent_hours
+        VARCHAR_500 output_deliverable "nullable"
+    }
+
+    blockers {
+        BIGINT id PK
+        BIGINT report_version_id FK
+        INT display_order
+        VARCHAR_1000 description
+        BIT_1 key_issue "at most one per version"
+    }
+
+    achievements {
+        BIGINT id PK
+        BIGINT report_version_id FK
+        INT display_order
+        VARCHAR_1000 description
+        BIT_1 key_achievement "at most one per version"
+    }
+
+    hours_entries {
+        BIGINT id PK
+        BIGINT report_version_id FK
+        VARCHAR_20 task_type "DEVELOPMENT | TESTING | MEETINGS | DOCUMENTATION | OTHER"
+        DECIMAL_5_2 hours
+    }
+
+    review_comments {
+        BIGINT id PK
+        BIGINT report_version_id FK
+        BIGINT reviewer_id FK
+        VARCHAR_20 action "APPROVE | REQUEST_CHANGES"
+        VARCHAR_2000 comment "required when action is REQUEST_CHANGES"
+        DATETIME_6 created_at
+    }

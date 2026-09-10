@@ -11,7 +11,7 @@
 <text x="406" y="316" font-size="11.5" fill="#475569" text-anchor="start">tagged on</text>
 <path d="M605,252 L605,380" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)" marker-end="url(#many)"/>
 <text x="615" y="366" font-size="11.5" fill="#475569" text-anchor="start">has versions</text>
-<path d="M106,198 L106,300" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)" marker-end="url(#many)"/>
+<path d="M106,215 L106,300" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)" marker-end="url(#many)"/>
 <text x="116" y="286" font-size="11.5" fill="#475569" text-anchor="start">reviews</text>
 <path d="M440,422 L408,422 L408,348 L340,348" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)" marker-end="url(#many)"/>
 <text x="372" y="392" font-size="11.5" fill="#475569" text-anchor="middle">made against</text>
@@ -22,7 +22,7 @@
 <path d="M822,80 L822,680" fill="none" stroke="#94a3b8" stroke-width="1.6"/>
 <path d="M770,438 L822,438" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-start="url(#one)"/>
 <text x="0" y="0" font-size="11.5" fill="#475569" text-anchor="middle" transform="translate(813,380) rotate(-90)">contains</text>
-<rect x="40" y="40" width="300" height="158" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
+<rect x="40" y="40" width="300" height="175" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
 <path d="M40,48 a8,8 0 0 1 8,-8 h284 a8,8 0 0 1 8,8 v22 h-300 z" fill="#4f46e5"/>
 <text x="52" y="60" font-size="13" font-weight="700" fill="#ffffff">users</text>
 <text x="52" y="83" font-size="11.5" font-weight="600" fill="#1e293b" font-family="Consolas, Menlo, monospace">id</text>
@@ -42,8 +42,11 @@
 <rect x="41" y="156" width="298" height="17" fill="#f8fafc"/>
 <text x="52" y="168" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">enabled</text>
 <text x="288" y="168" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">BIT(1)</text>
-<text x="52" y="185" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">created_at</text>
-<text x="288" y="185" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME</text>
+<text x="52" y="185" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">token_version</text>
+<text x="288" y="185" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">INT</text>
+<rect x="41" y="190" width="298" height="17" fill="#f8fafc"/>
+<text x="52" y="202" font-size="11.5" font-weight="400" fill="#1e293b" font-family="Consolas, Menlo, monospace">created_at</text>
+<text x="288" y="202" font-size="10.5" fill="#64748b" text-anchor="end" font-family="Consolas, Menlo, monospace">DATETIME</text>
 <rect x="40" y="300" width="300" height="141" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.3"/>
 <path d="M40,308 a8,8 0 0 1 8,-8 h284 a8,8 0 0 1 8,8 v22 h-300 z" fill="#4f46e5"/>
 <text x="52" y="320" font-size="13" font-weight="700" fill="#ffffff">review_comments</text>

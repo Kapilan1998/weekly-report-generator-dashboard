@@ -20,94 +20,103 @@ differs from the shipped schema in two ways, both deliberate:
 
 ```mermaid
 erDiagram
-    USER ||--o{ REPORT : owns
-    PROJECT ||--o{ REPORT : "tagged on"
-    REPORT ||--|{ REPORT_VERSION : "has versions"
-    REPORT_VERSION ||--o{ TASK_ENTRY : contains
-    REPORT_VERSION ||--o{ BLOCKER : contains
-    REPORT_VERSION ||--o{ ACHIEVEMENT : contains
-    REPORT_VERSION ||--o{ HOURS_ENTRY : contains
-    REPORT_VERSION ||--o{ REVIEW_COMMENT : "reviewed by"
-    USER ||--o{ REVIEW_COMMENT : authors
+    users ||--o{ reports : "files"
+    users ||--o{ review_comments : "reviews as manager"
+    projects ||--o{ reports : "categorises"
+    reports ||--o{ report_versions : "keeps history of"
+    report_versions ||--o{ task_entries : "lists"
+    report_versions ||--o{ blockers : "lists"
+    report_versions ||--o{ achievements : "lists"
+    report_versions ||--o{ hours_entries : "breaks down"
+    report_versions ||--o{ review_comments : "was reviewed by"
 
-    USER {
-        bigint id PK
-        varchar name
-        varchar email UK
-        varchar password_hash
-        enum role "TEAM_MEMBER | MANAGER"
-        bit enabled
-        datetime created_at
+    users {
+        BIGINT id PK
+        VARCHAR_255 name
+        VARCHAR_255 email UK
+        VARCHAR_255 password_hash
+        VARCHAR_20 role "TEAM_MEMBER | MANAGER"
+        BIT_1 enabled "V3 - a retired account, kept for its authorship"
+        INT token_version "V4 - bumped to revoke this account's tokens"
+        DATETIME created_at
     }
-    PROJECT {
-        bigint id PK
-        varchar name UK
-        varchar description
-        bit active
-        datetime created_at
+
+    projects {
+        BIGINT id PK
+        VARCHAR_120 name UK
+        VARCHAR_500 description "nullable"
+        BIT_1 active "false retires it; reports still reference it"
+        DATETIME_6 created_at
     }
-    REPORT {
-        bigint id PK
-        bigint user_id FK
-        bigint project_id FK
-        date week_start
-        date week_end
-        enum status "DRAFT | SUBMITTED | NEEDS_CORRECTION | APPROVED"
-        datetime last_submitted_at
-        datetime created_at
-        datetime updated_at
+
+    reports {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT project_id FK
+        DATE week_start "UK with user_id - one report per user per week"
+        DATE week_end "always week_start + 6"
+        VARCHAR_20 status "DRAFT | SUBMITTED | NEEDS_CORRECTION | APPROVED"
+        DATETIME_6 last_submitted_at "nullable until first submit"
+        DATETIME_6 created_at
+        DATETIME_6 updated_at
     }
-    REPORT_VERSION {
-        bigint id PK
-        bigint report_id FK
-        int version_number
-        varchar tasks_planned_next_week
-        varchar notes
-        varchar links
-        datetime submitted_at
-        datetime created_at
-        datetime updated_at
+
+    report_versions {
+        BIGINT id PK
+        BIGINT report_id FK
+        INT version_number "UK with report_id"
+        VARCHAR_4000 tasks_planned_next_week "nullable"
+        VARCHAR_4000 notes "nullable"
+        VARCHAR_1000 links "nullable"
+        DATETIME_6 submitted_at "null while it is the open working copy"
+        DATETIME_6 created_at
+        DATETIME_6 updated_at
     }
-    TASK_ENTRY {
-        bigint id PK
-        bigint report_version_id FK
-        int display_order
-        varchar task_name
-        enum priority "LOW | MEDIUM | HIGH"
-        int planned_percent
-        int actual_percent
-        enum status "NOT_STARTED | IN_PROGRESS | DONE | BLOCKED"
-        decimal time_planned_hours
-        decimal time_spent_hours
-        varchar output_deliverable
+
+    task_entries {
+        BIGINT id PK
+        BIGINT report_version_id FK
+        INT display_order
+        VARCHAR_255 task_name
+        VARCHAR_20 priority "LOW | MEDIUM | HIGH"
+        VARCHAR_20 status "NOT_STARTED | IN_PROGRESS | DONE | BLOCKED"
+        INT planned_percent "0-100"
+        INT actual_percent "0-100"
+        DECIMAL_5_2 time_planned_hours
+        DECIMAL_5_2 time_spent_hours
+        VARCHAR_500 output_deliverable "nullable"
     }
-    BLOCKER {
-        bigint id PK
-        bigint report_version_id FK
-        int display_order
-        varchar description
-        bit key_issue
+
+    blockers {
+        BIGINT id PK
+        BIGINT report_version_id FK
+        INT display_order
+        VARCHAR_1000 description
+        BIT_1 key_issue "at most one per version"
     }
-    ACHIEVEMENT {
-        bigint id PK
-        bigint report_version_id FK
-        int display_order
-        varchar description
-        bit key_achievement
+
+    achievements {
+        BIGINT id PK
+        BIGINT report_version_id FK
+        INT display_order
+        VARCHAR_1000 description
+        BIT_1 key_achievement "at most one per version"
     }
-    HOURS_ENTRY {
-        bigint id PK
-        bigint report_version_id FK
-        enum task_type "DEVELOPMENT | TESTING | MEETINGS | DOCUMENTATION | OTHER"
-        decimal hours
+
+    hours_entries {
+        BIGINT id PK
+        BIGINT report_version_id FK
+        VARCHAR_20 task_type "DEVELOPMENT | TESTING | MEETINGS | DOCUMENTATION | OTHER"
+        DECIMAL_5_2 hours
     }
-    REVIEW_COMMENT {
-        bigint id PK
-        bigint report_version_id FK
-        bigint reviewer_id FK
-        enum action "APPROVE | REQUEST_CHANGES"
-        varchar comment
-        datetime created_at
+
+    review_comments {
+        BIGINT id PK
+        BIGINT report_version_id FK
+        BIGINT reviewer_id FK
+        VARCHAR_20 action "APPROVE | REQUEST_CHANGES"
+        VARCHAR_2000 comment "required when action is REQUEST_CHANGES"
+        DATETIME_6 created_at
     }
 ```
 

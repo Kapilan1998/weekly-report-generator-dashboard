@@ -20,7 +20,7 @@ TABLES = [
         ('id', 'BIGINT', 'PK'), ('name', 'VARCHAR(255)', ''),
         ('email', 'VARCHAR(255)', 'UK'), ('password_hash', 'VARCHAR(255)', ''),
         ('role', 'VARCHAR(20)', ''), ('enabled', 'BIT(1)', ''),
-        ('created_at', 'DATETIME', ''),
+        ('token_version', 'INT', ''), ('created_at', 'DATETIME', ''),
     ]),
     ('review_comments', 40, 300, 300, [
         ('id', 'BIGINT', 'PK'), ('report_version_id', 'BIGINT', 'FK'),
