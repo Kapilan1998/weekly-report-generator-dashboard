@@ -6,6 +6,10 @@ import { useAuth } from '../auth/useAuth'
 import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { Card, EmptyState, PageHeader, TableSkeleton } from '../components/Card'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { Pagination } from '../components/Pagination'
+import { PasswordField } from '../components/PasswordField'
+import { RowButton } from '../components/RowButton'
 import { SelectField } from '../components/SelectField'
 import { TextField } from '../components/TextField'
 import { formatDate } from '../lib/format'
@@ -17,6 +21,9 @@ interface NewUserForm {
   password: string
   role: Role
 }
+
+/** Ten accounts a page. A team, not a directory. */
+const PAGE_SIZE = 10
 
 const BLANK: NewUserForm = { name: '', email: '', password: '', role: 'TEAM_MEMBER' }
 
@@ -58,6 +65,16 @@ export function UsersPage() {
 
   const [busyId, setBusyId] = useState<number | null>(null)
   const [confirmId, setConfirmId] = useState<number | null>(null)
+  const [pageNumber, setPageNumber] = useState(0)
+
+  /*
+   * Filtered in the browser, like the pagination below it and for the same reason: the whole
+   * account list arrives in one response, so there is nothing to push to the server without
+   * changing that endpoint - and a team is not a directory.
+   */
+  const [search, setSearch] = useState('')
+  const [enabledFilter, setEnabledFilter] = useState<'ALL' | 'ENABLED' | 'DISABLED'>('ALL')
+  const [roleFilter, setRoleFilter] = useState<'ALL' | Role>('ALL')
 
   useEffect(() => {
     let active = true
@@ -178,6 +195,65 @@ export function UsersPage() {
     }
   }
 
+  /*
+   * Paginated in the browser. `GET /api/users` returns every account in one unpaginated
+   * response, so there is nothing to page on the server without changing that endpoint - and
+   * the count here is a team, not a directory.
+   *
+   * `currentPage` is clamped during render rather than reset from an effect: deleting the
+   * last account on a page would otherwise leave `pageNumber` past the end. Deriving what to
+   * show beats chasing it with a setState, which is also what this repo's
+   * `react(set-state-in-effect)` rule asks for.
+   */
+  /**
+   * Matches the search against the name *and* the email. Two people can share a name in this
+   * app - the list already disambiguates them by email elsewhere - so searching only names
+   * would leave the one case you most need to search for unreachable.
+   *
+   * Both sides are lower-cased rather than using a case-insensitive regex: the term is user
+   * input and would otherwise need escaping before it could be a pattern.
+   */
+  function matches(account: UserDetail): boolean {
+    if (enabledFilter === 'ENABLED' && !account.enabled) return false
+    if (enabledFilter === 'DISABLED' && account.enabled) return false
+    if (roleFilter !== 'ALL' && account.role !== roleFilter) return false
+
+    const term = search.trim().toLowerCase()
+    if (term === '') return true
+    return (
+      account.name.toLowerCase().includes(term) || account.email.toLowerCase().includes(term)
+    )
+  }
+
+  const all = users ?? []
+  const accounts = all.filter(matches)
+  /*
+   * Looked up in `all`, not in the current page. The popup is open while the list can still be
+   * re-filtered or paged underneath it, and losing the subject would leave a dialog asking to
+   * delete nothing - the same failure the draft delete had.
+   */
+  const pendingDelete = confirmId === null ? undefined : all.find((a) => a.id === confirmId)
+  const filtered = search.trim() !== '' || enabledFilter !== 'ALL' || roleFilter !== 'ALL'
+
+  const totalPages = Math.max(1, Math.ceil(accounts.length / PAGE_SIZE))
+  // Clamped during render: narrowing a filter or deleting the last row on a page can both
+  // leave `pageNumber` past the end.
+  const currentPage = Math.min(pageNumber, totalPages - 1)
+  const pageAccounts = accounts.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE)
+
+  /** Any filter change returns to the first page of the new result. */
+  function onFilterChange(apply: () => void) {
+    apply()
+    setPageNumber(0)
+  }
+
+  function clearFilters() {
+    setSearch('')
+    setEnabledFilter('ALL')
+    setRoleFilter('ALL')
+    setPageNumber(0)
+  }
+
   return (
     <section className="animate-fade-up space-y-4">
       <PageHeader
@@ -220,10 +296,12 @@ export function UsersPage() {
               error={fieldErrors.email}
               onChange={(event) => setForm({ ...form, email: event.target.value })}
             />
-            <TextField
+            {/* A toggle matters more here than on a sign-in form: a manager is typing a
+                password they then have to read out or pass on to somebody else, so being
+                unable to check it is what causes the "it doesn't work" follow-up. */}
+            <PasswordField
               label="Initial password"
               name="new-user-password"
-              type="password"
               autoComplete="new-password"
               value={form.password}
               error={fieldErrors.password}
@@ -259,23 +337,127 @@ export function UsersPage() {
         </Card>
       )}
 
+      {/* Hidden until there is something to filter. On a phone the four controls stack; from
+          `sm` the two dropdowns pair up, and from `lg` the search takes the remaining width. */}
+      {users !== null && all.length > 0 && (
+        <div className="rounded-xl bg-navy-800 p-4 shadow-lg shadow-black/20 ring-1 ring-white/5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_11rem_11rem]">
+            <label className="sm:col-span-2 lg:col-span-1">
+              <span className="block text-sm font-medium text-ink-300">Search</span>
+              <div className="relative mt-1.5">
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => onFilterChange(() => setSearch(event.target.value))}
+                  placeholder="Name or email..."
+                  aria-label="Search accounts by name or email"
+                  /* pr-9 leaves room for the clear button, and the bracket rule removes the
+                     browser's own search cross - it cannot be styled and would sit beside
+                     ours looking like a duplicate. */
+                  className="block w-full appearance-none rounded-lg bg-navy-900/70 py-2 pl-3 pr-9 text-sm text-ink-100 ring-1 ring-inset ring-white/10 transition placeholder:text-ink-500 hover:ring-white/20 focus:bg-navy-900 focus:ring-2 focus:ring-inset focus:ring-brand-400 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
+                />
+                {search !== '' && (
+                  <button
+                    type="button"
+                    onClick={() => onFilterChange(() => setSearch(''))}
+                    aria-label="Clear search"
+                    title="Clear search"
+                    className="absolute inset-y-0 right-0 grid w-9 place-items-center text-ink-500 transition hover:text-ink-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true" className="size-4">
+                      <path strokeLinecap="round" d="M6 6l12 12M18 6 6 18" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </label>
+
+            <SelectField
+              label="Role"
+              name="role-filter"
+              value={roleFilter}
+              onChange={(event) =>
+                onFilterChange(() => setRoleFilter(event.target.value as typeof roleFilter))
+              }
+            >
+              <option value="ALL">All roles</option>
+              <option value="TEAM_MEMBER">Team member</option>
+              <option value="MANAGER">Manager</option>
+            </SelectField>
+
+            <SelectField
+              label="Status"
+              name="status-filter"
+              value={enabledFilter}
+              onChange={(event) =>
+                onFilterChange(() => setEnabledFilter(event.target.value as typeof enabledFilter))
+              }
+            >
+              <option value="ALL">All statuses</option>
+              <option value="ENABLED">Enabled</option>
+              <option value="DISABLED">Disabled</option>
+            </SelectField>
+          </div>
+
+          {filtered && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <p className="text-xs text-ink-500">
+                Showing <span className="text-ink-300">{accounts.length}</span> of {all.length}{' '}
+                account{all.length === 1 ? '' : 's'}
+              </p>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-xs font-medium text-brand-300 transition hover:text-brand-200"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <Card>
         {users === null ? (
           <TableSkeleton rows={4} columns={5} />
-        ) : users.length === 0 ? (
+        ) : all.length === 0 ? (
           !error && <EmptyState title="No accounts" />
+        ) : accounts.length === 0 ? (
+          /* Distinct from "no accounts": there are accounts, just none matching. */
+          <EmptyState
+            title="No accounts match"
+            description="Nothing matches the current search, role and status."
+            action={
+              <Button variant="secondary" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            }
+          />
         ) : (
           <ul className="divide-y divide-white/5">
-            {users.map((account) => {
+            {pageAccounts.map((account) => {
               const isSelf = account.id === currentUser?.id
               const busy = busyId === account.id
 
               return (
-                <li key={account.id} className="px-4 py-3.5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+                /* `group` drives the hover styling. Matches the Projects list, so the two
+                   admin pages behave the same way under the pointer. */
+                <li
+                  key={account.id}
+                  className="group px-4 py-3.5 transition-colors hover:bg-white/[0.04]"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink-100">
-                        <Link to={`/team/${account.id}`} className="truncate hover:text-brand-200">
+                      <p className="flex flex-wrap items-center gap-2 text-base font-medium text-ink-100">
+                        {/* The row tints the name emerald; pointing at the link itself adds
+                            an underline. Colour was tried for that second level and dropped:
+                            `group-hover:` and `hover:` have equal specificity, so which one
+                            won came down to Tailwind's output order. An underline is a
+                            different property, so the two compose instead of competing. */}
+                        <Link
+                          to={`/team/${account.id}`}
+                          className="truncate transition-colors group-hover:text-emerald-300 hover:underline hover:underline-offset-4"
+                        >
                           {account.name}
                         </Link>
                         {isSelf && (
@@ -298,7 +480,7 @@ export function UsersPage() {
                       </p>
                     </div>
 
-                    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
                       {isSelf ? (
                         <span className="rounded-lg bg-white/5 px-2.5 py-1.5 text-xs text-ink-500 ring-1 ring-inset ring-white/10">
                           {ROLE_LABELS[account.role]} · your own account
@@ -320,30 +502,24 @@ export function UsersPage() {
                             </select>
                           </label>
 
+                          {/* The tone follows the label: amber for taking an account out
+                              of service, emerald for restoring it. */}
                           <RowButton
+                            tone={account.enabled ? 'retire' : 'restore'}
                             onClick={() => save(account, { enabled: !account.enabled })}
                             disabled={busy}
                           >
                             {account.enabled ? 'Disable' : 'Enable'}
                           </RowButton>
 
-                          {account.reportCount === 0 &&
-                            (confirmId === account.id ? (
-                              <>
-                                <RowButton
-                                  tone="danger"
-                                  onClick={() => handleDelete(account)}
-                                  disabled={busy}
-                                >
-                                  Confirm delete
-                                </RowButton>
-                                <RowButton onClick={() => setConfirmId(null)}>Cancel</RowButton>
-                              </>
-                            ) : (
-                              <RowButton tone="danger" onClick={() => setConfirmId(account.id)}>
-                                Delete
-                              </RowButton>
-                            ))}
+                          {/* Offered only for an account with no reports: authorship is part
+                              of the audit trail, so anyone who has filed can be disabled but
+                              never deleted, and the backend refuses it. */}
+                          {account.reportCount === 0 && (
+                            <RowButton tone="danger" onClick={() => setConfirmId(account.id)}>
+                              Delete
+                            </RowButton>
+                          )}
                         </>
                       )}
                     </div>
@@ -353,6 +529,19 @@ export function UsersPage() {
             })}
           </ul>
         )}
+
+        {/* Hidden on a single page: a control that can only say "1 of 1" is noise. */}
+        {users !== null && accounts.length > PAGE_SIZE && (
+          <Pagination
+            page={currentPage}
+            size={PAGE_SIZE}
+            totalElements={accounts.length}
+            totalPages={totalPages}
+            first={currentPage === 0}
+            last={currentPage >= totalPages - 1}
+            onChange={setPageNumber}
+          />
+        )}
       </Card>
 
       <p className="text-xs text-ink-500">
@@ -360,6 +549,23 @@ export function UsersPage() {
         email an invitation token instead — that needs mail infrastructure this project
         doesn&apos;t have.
       </p>
+
+      {/* The same confirmation the draft and project deletes use, so a destructive action
+          asks the same way everywhere in the app. */}
+      <ConfirmDialog
+        open={pendingDelete !== undefined}
+        title={'Delete ' + (pendingDelete?.name ?? '') + '?'}
+        confirmLabel={busyId === confirmId ? 'Deleting...' : 'Yes, delete'}
+        cancelLabel="No"
+        loading={busyId === confirmId}
+        onConfirm={() => {
+          if (pendingDelete) void handleDelete(pendingDelete)
+        }}
+        onCancel={() => setConfirmId(null)}
+      >
+        {pendingDelete?.email} has filed no reports, so nothing loses its author. The account
+        is removed permanently and this cannot be undone.
+      </ConfirmDialog>
     </section>
   )
 }
@@ -367,32 +573,4 @@ export function UsersPage() {
 /** Alphabetical, matching the backend's order, so a role change doesn't reorder the list. */
 function sorted(users: UserDetail[]): UserDetail[] {
   return [...users].sort((left, right) => left.name.localeCompare(right.name))
-}
-
-function RowButton({
-  children,
-  onClick,
-  disabled,
-  tone = 'neutral',
-}: {
-  children: React.ReactNode
-  onClick: () => void
-  disabled?: boolean
-  tone?: 'neutral' | 'danger'
-}) {
-  const toneClass =
-    tone === 'danger'
-      ? 'text-red-300 ring-red-500/25 hover:bg-red-500/10 hover:text-red-200'
-      : 'text-ink-300 ring-white/10 hover:bg-white/5 hover:text-ink-100'
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset transition disabled:cursor-not-allowed disabled:opacity-50 ${toneClass}`}
-    >
-      {children}
-    </button>
-  )
 }
