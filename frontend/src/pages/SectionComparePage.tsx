@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { errorMessage } from '../api/client'
-import { getReport, listTeamReports } from '../api/reports'
+import { getReport, getWeekStatus, listTeamReports } from '../api/reports'
 import { useAuth } from '../auth/useAuth'
 import { Alert } from '../components/Alert'
 import { Card, EmptyState, PageHeader, TableSkeleton } from '../components/Card'
@@ -11,7 +11,7 @@ import { formatHours, humanizeEnum } from '../lib/format'
 import { fresh } from '../lib/keyed'
 import type { Keyed } from '../lib/keyed'
 import { currentMonday } from '../lib/week'
-import type { ReportDetail } from '../types/api'
+import type { ReportDetail, UserSummary } from '../types/api'
 
 /** The sections worth comparing across people — the ones that are about the team, not a task list. */
 const SECTIONS = [
@@ -39,11 +39,21 @@ type SectionKey = (typeof SECTIONS)[number]['key']
  * **Whose reports appear.** A manager may not read another member's draft, so other people's
  * drafts are filtered out before fetching rather than left to fail — and the count of what
  * was skipped is shown, since a silently short list would read as "nobody had blockers".
+ *
+ * **Who filed nothing is shown too**, from `GET /api/reports/week-status`. Without it a week
+ * where one person filed renders as a single card with no explanation, which reads as a
+ * broken page rather than as a quiet week — and "across all team members" is the point of
+ * the view. That endpoint starts from the user list rather than the report list, so a member
+ * with no report still gets a row; it is the same source the dashboard's week panel uses.
  */
 interface WeekSlice {
   reports: ReportDetail[]
   /** Other people's drafts, counted so a short list isn't read as "nobody had blockers". */
   privateDrafts: number
+  /** Enabled accounts with no report at all for the week — the brief's "not yet started". */
+  notFiled: UserSummary[]
+  /** Everyone the week-status endpoint knows about, for the "n of m" line. */
+  teamSize: number
   message: string | null
 }
 
@@ -71,13 +81,23 @@ export function SectionComparePage() {
     let active = true
     const fetchKey = `${week}:${user?.id ?? ''}`
     let privateDrafts = 0
+    let notFiled: UserSummary[] = []
+    let teamSize = 0
 
-    listTeamReports({ weekStart: week, size: 50, sort: 'user.name,asc' })
-      .then((page) => {
+    // The week status is fetched alongside rather than after: it does not depend on the
+    // report list, and a caught failure degrades to "no non-filers shown" instead of
+    // taking the whole comparison down with it.
+    Promise.all([
+      listTeamReports({ weekStart: week, size: 50, sort: 'user.name,asc' }),
+      getWeekStatus(week).catch(() => []),
+    ])
+      .then(([page, weekStatus]) => {
         const readable = page.content.filter(
           (summary) => summary.status !== 'DRAFT' || summary.owner.id === user?.id,
         )
         privateDrafts = page.content.length - readable.length
+        notFiled = weekStatus.filter((row) => row.status === null).map((row) => row.member)
+        teamSize = weekStatus.length
 
         // Each detail fetch fails independently: one report going missing mid-render
         // shouldn't blank the whole comparison.
@@ -90,6 +110,8 @@ export function SectionComparePage() {
           data: {
             reports: details.filter((detail): detail is ReportDetail => detail !== null),
             privateDrafts,
+            notFiled,
+            teamSize,
             message: null,
           },
         })
@@ -101,6 +123,8 @@ export function SectionComparePage() {
           data: {
             reports: [],
             privateDrafts: 0,
+            notFiled: [],
+            teamSize: 0,
             message: errorMessage(caught, 'Could not load the week.'),
           },
         })
@@ -159,6 +183,24 @@ export function SectionComparePage() {
         </Alert>
       )}
 
+      {/* Answered here rather than only in the footer: one card on a page headed "across the
+          team" reads as a broken query until you know how many people filed at all. */}
+      {data && data.teamSize > 0 && (
+        <p className="text-sm text-ink-300">
+          Showing <span className="font-semibold text-ink-100">{data.reports.length}</span> of{' '}
+          {data.teamSize} team member{data.teamSize === 1 ? '' : 's'}
+          {data.notFiled.length > 0 && (
+            <>
+              {' — '}
+              <span className="text-amber-200">
+                {data.notFiled.length} filed nothing this week
+              </span>
+            </>
+          )}
+          .
+        </p>
+      )}
+
       {data === null ? (
         <Card>
           <TableSkeleton rows={4} columns={3} />
@@ -168,7 +210,11 @@ export function SectionComparePage() {
           <Card>
             <EmptyState
               title="Nothing to compare"
-              description="No readable reports were filed for this week."
+              description={
+                data.notFiled.length > 0
+                  ? `Nobody filed a readable report for this week — all ${data.notFiled.length} team members are still to start.`
+                  : 'No readable reports were filed for this week.'
+              }
             />
           </Card>
         )
@@ -197,6 +243,33 @@ export function SectionComparePage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* The brief's fifth status - "not yet started" - which is the absence of a report row
+          and so can never appear as a card above. Names link through to the member's history,
+          matching the dashboard's week panel. */}
+      {data && data.notFiled.length > 0 && (
+        <Card>
+          <div className="border-b border-white/5 bg-navy-700/30 px-4 py-3">
+            <h2 className="text-sm font-semibold text-ink-100">
+              No report filed ({data.notFiled.length})
+            </h2>
+            <p className="mt-0.5 text-xs text-ink-500">
+              Nothing to compare for these members this week.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-x-1.5 gap-y-2 px-4 py-3.5">
+            {data.notFiled.map((member) => (
+              <Link
+                key={member.id}
+                to={`/team/${member.id}`}
+                className="rounded-full bg-white/5 px-2.5 py-1 text-xs font-medium text-ink-300 ring-1 ring-inset ring-white/10 transition hover:bg-white/10 hover:text-ink-100"
+              >
+                {member.name}
+              </Link>
+            ))}
+          </div>
+        </Card>
       )}
 
       <p className="text-xs text-ink-500">
