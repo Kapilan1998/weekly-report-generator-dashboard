@@ -37,6 +37,24 @@ export function ReportTable({
     return canReview && report.status === 'SUBMITTED' && report.owner.id !== currentUserId
   }
 
+  /**
+   * What the Action column offers for one row. Three outcomes, because "nothing to review"
+   * and "nothing you may read" are different facts and an empty cell states neither — under
+   * a header reading Action it just looks unfinished.
+   *
+   * - `review` — submitted, and not the manager's own: the decision is theirs to make.
+   * - `open`   — already decided, or their own report. Nothing to review, but still readable,
+   *              and a manager looking at an approved week usually wants to read it. "Open" is
+   *              the same word the dashboard's week-status panel uses for this.
+   * - `private` — somebody else's draft. Deliberately **not** a link: the backend refuses it
+   *              until it is submitted, so a link would be a dead end. It says why instead.
+   */
+  function actionFor(report: ReportSummary): 'review' | 'open' | 'private' {
+    if (reviewable(report)) return 'review'
+    const isOwn = report.owner.id === currentUserId
+    return report.status === 'DRAFT' && !isOwn ? 'private' : 'open'
+  }
+
   return (
     <>
       <table className="hidden min-w-full divide-y divide-white/5 text-sm sm:table">
@@ -92,7 +110,7 @@ export function ReportTable({
               </td>
               {canReview && (
                 <td className="px-4 py-3.5 text-right">
-                  {reviewable(report) && (
+                  {actionFor(report) === 'review' ? (
                     <Link
                       to={`/review/${report.id}`}
                       onClick={(event) => event.stopPropagation()}
@@ -100,6 +118,18 @@ export function ReportTable({
                     >
                       Review
                     </Link>
+                  ) : actionFor(report) === 'open' ? (
+                    <Link
+                      to={`/reports/${report.id}`}
+                      onClick={(event) => event.stopPropagation()}
+                      className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-brand-300 ring-1 ring-inset ring-white/10 transition hover:bg-white/5 hover:text-brand-200"
+                    >
+                      Open
+                    </Link>
+                  ) : (
+                    <span className="text-xs whitespace-nowrap text-ink-500">
+                      Private until submitted
+                    </span>
                   )}
                 </td>
               )}
@@ -126,13 +156,19 @@ export function ReportTable({
                 Submitted {formatDateTime(report.lastSubmittedAt)}
               </p>
             </Link>
-            {reviewable(report) && (
+            {/* No "Open" here: the whole card is already a link to the report, so it would
+                be a second control for the same thing. Only the two facts the card cannot
+                convey on its own are added. */}
+            {canReview && actionFor(report) === 'review' && (
               <Link
                 to={`/review/${report.id}`}
                 className="mt-2.5 inline-flex items-center rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-500"
               >
                 Review
               </Link>
+            )}
+            {canReview && actionFor(report) === 'private' && (
+              <p className="mt-2 text-xs text-ink-500">Private until submitted</p>
             )}
           </li>
         ))}
