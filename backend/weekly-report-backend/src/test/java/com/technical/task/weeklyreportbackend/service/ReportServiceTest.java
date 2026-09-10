@@ -24,6 +24,7 @@ import com.technical.task.weeklyreportbackend.exception.DuplicateReportException
 import com.technical.task.weeklyreportbackend.exception.IllegalReportTransitionException;
 import com.technical.task.weeklyreportbackend.exception.InvalidReportContentException;
 import com.technical.task.weeklyreportbackend.exception.ProjectChangeNotAllowedException;
+import com.technical.task.weeklyreportbackend.exception.ReportNotDeletableException;
 import com.technical.task.weeklyreportbackend.exception.ReportNotFoundException;
 import com.technical.task.weeklyreportbackend.exception.ReportNotSubmittableException;
 import com.technical.task.weeklyreportbackend.mapper.ReportMapper;
@@ -40,6 +41,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -575,5 +577,81 @@ class ReportServiceTest {
         reportService.weekStatus(WEDNESDAY);
 
         Mockito.verify(reportRepository).findByWeekStart(MONDAY);
+    }
+
+    // ---- delete ----
+
+    @Test
+    void deleteRemovesAnUnsubmittedDraft() {
+        Report draft = report(ReportStatus.DRAFT, null);
+        Mockito.when(accessGuard.requireOwnedForUpdate(5L, alice)).thenReturn(draft);
+
+        reportService.delete(5L, alice);
+
+        Mockito.verify(reportRepository).delete(draft);
+    }
+
+    @Test
+    void deleteGoesThroughTheOwnerGuardSoAPeersReportIsNotReachable() {
+        // The guard is what turns a peer's id into a 404 rather than a 403, so ids cannot be
+        // probed through this endpoint either. Delete must not resolve the report any other way.
+        Mockito.when(accessGuard.requireOwnedForUpdate(5L, alice))
+                .thenThrow(new ReportNotFoundException());
+
+        assertThrows(ReportNotFoundException.class, () -> reportService.delete(5L, alice));
+
+        Mockito.verify(reportRepository, Mockito.never()).delete(Mockito.any(Report.class));
+    }
+
+    @Test
+    void deleteRefusesASubmittedReport() {
+        Report submitted = report(ReportStatus.SUBMITTED, LocalDateTime.now());
+        Mockito.when(accessGuard.requireOwnedForUpdate(5L, alice)).thenReturn(submitted);
+
+        ReportNotDeletableException thrown = assertThrows(ReportNotDeletableException.class,
+                () -> reportService.delete(5L, alice));
+
+        // 409, not 403: the caller may delete their own drafts, so this is a conflict with
+        // the report's state rather than a permission problem.
+        assertEquals(HttpStatus.CONFLICT, thrown.getStatus());
+        Mockito.verify(reportRepository, Mockito.never()).delete(Mockito.any(Report.class));
+    }
+
+    @Test
+    void deleteRefusesAnApprovedReport() {
+        Mockito.when(accessGuard.requireOwnedForUpdate(5L, alice))
+                .thenReturn(report(ReportStatus.APPROVED, LocalDateTime.now()));
+
+        assertThrows(ReportNotDeletableException.class, () -> reportService.delete(5L, alice));
+
+        Mockito.verify(reportRepository, Mockito.never()).delete(Mockito.any(Report.class));
+    }
+
+    @Test
+    void deleteRefusesAReportNeedingCorrection() {
+        // The one most likely to be argued about: it is editable again, so it looks like a
+        // draft. It is not - it has a frozen version and a manager's comment against it.
+        Mockito.when(accessGuard.requireOwnedForUpdate(5L, alice))
+                .thenReturn(report(ReportStatus.NEEDS_CORRECTION, LocalDateTime.now()));
+
+        assertThrows(ReportNotDeletableException.class, () -> reportService.delete(5L, alice));
+
+        Mockito.verify(reportRepository, Mockito.never()).delete(Mockito.any(Report.class));
+    }
+
+    @Test
+    void deleteRefusesADraftThatHasEverBeenSubmitted() {
+        /*
+         * Unreachable today: no transition sets a report back to DRAFT, so DRAFT already
+         * implies never-submitted. The guard is asserted anyway, because the day someone adds
+         * an "unsubmit" or "withdraw" action this method must fail closed rather than quietly
+         * become a way to delete reviewed work.
+         */
+        Mockito.when(accessGuard.requireOwnedForUpdate(5L, alice))
+                .thenReturn(report(ReportStatus.DRAFT, LocalDateTime.now()));
+
+        assertThrows(ReportNotDeletableException.class, () -> reportService.delete(5L, alice));
+
+        Mockito.verify(reportRepository, Mockito.never()).delete(Mockito.any(Report.class));
     }
 }
