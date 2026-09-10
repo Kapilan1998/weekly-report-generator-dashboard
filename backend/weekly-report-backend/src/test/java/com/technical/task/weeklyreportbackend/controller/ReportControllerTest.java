@@ -15,6 +15,7 @@ import com.technical.task.weeklyreportbackend.dto.UpdateReportRequest;
 import com.technical.task.weeklyreportbackend.dto.WeekStatusResponse;
 import com.technical.task.weeklyreportbackend.security.CustomUserDetails;
 import com.technical.task.weeklyreportbackend.service.ReportReviewService;
+import com.technical.task.weeklyreportbackend.exception.ReportNotDeletableException;
 import com.technical.task.weeklyreportbackend.service.ReportService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -237,5 +238,28 @@ class ReportControllerTest {
 
         assertSame(detail, reportController.requestChanges(5L, request, principal));
         Mockito.verify(reviewService).requestChanges(5L, request, actor);
+    }
+
+    @Test
+    void deleteDelegatesToTheService() {
+        User actor = actor();
+        Mockito.when(principal.getUser()).thenReturn(actor);
+
+        reportController.delete(5L, principal);
+
+        // Returns void with @ResponseStatus(NO_CONTENT); the only observable effect is the call.
+        Mockito.verify(reportService).delete(5L, actor);
+    }
+
+    @Test
+    void deleteLetsTheRefusalThroughUntouched() {
+        User actor = actor();
+        Mockito.when(principal.getUser()).thenReturn(actor);
+        Mockito.doThrow(new ReportNotDeletableException()).when(reportService).delete(5L, actor);
+
+        // Caught here it would surface as a silent 204 and the row would reappear on refresh;
+        // GlobalExceptionHandler turns it into the 409 the list shows as an error.
+        assertThrows(ReportNotDeletableException.class,
+                () -> reportController.delete(5L, principal));
     }
 }

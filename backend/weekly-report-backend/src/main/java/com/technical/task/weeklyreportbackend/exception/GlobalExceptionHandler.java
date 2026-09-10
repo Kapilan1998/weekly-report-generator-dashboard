@@ -11,6 +11,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +22,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Turns exceptions into a single response shape.
@@ -115,6 +117,30 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation", ex);
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(body(HttpStatus.CONFLICT, "The change conflicts with existing data"));
+    }
+
+    /**
+     * The right path with the wrong HTTP method — e.g. DELETE on an endpoint that only serves
+     * GET and PUT.
+     *
+     * <p>Handled explicitly for the same reason as {@link NoResourceFoundException} below it,
+     * and this one was learned the hard way: without it the catch-all turned a wrong method
+     * into {@code 500 "Something went wrong"}, and a frontend calling a DELETE endpoint that
+     * had not been deployed yet looked like a broken server rather than a stale one. A wrong
+     * method is the caller's error, so it gets a 4xx and says which methods are allowed.
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex) {
+        String allowed = ex.getSupportedHttpMethods() == null
+                ? ""
+                : ex.getSupportedHttpMethods().stream().map(String::valueOf).collect(Collectors.joining(", "));
+        String message = allowed.isBlank()
+                ? "This endpoint does not support " + ex.getMethod()
+                : "This endpoint does not support " + ex.getMethod() + " — try " + allowed;
+
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(body(HttpStatus.METHOD_NOT_ALLOWED, message));
     }
 
     /**

@@ -55,23 +55,36 @@ export function AssistantWidget() {
   const [error, setError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Asked once. A team member never reaches the endpoint, so the request isn't made at all.
-  useEffect(() => {
-    if (!isManager) return
-    let active = true
-    getAssistantStatus()
-      .then((result) => {
-        if (active) setStatus(result)
-      })
-      .catch(() => {
-        // A failure here means the feature is unusable, which is the same outcome as
-        // unconfigured - so it degrades to the same disabled state rather than an alarm.
-        if (active) setStatus({ configured: false, model: '' })
-      })
-    return () => {
-      active = false
+  /*
+   * The status is fetched when the panel is first opened, NOT on mount.
+   *
+   * This widget lives in the app shell, so a mount-time request fired on every full page load
+   * a manager made - including on the 404 page, which otherwise touches the API not at all.
+   * That had a visible consequence: with an expired token the probe came back 401, the API
+   * client's unauthorized handler signed the user out, and a manager who mistyped a URL was
+   * bounced to the login screen instead of seeing the not-found page. A team member saw the
+   * page correctly, because nothing on it called the API. Deferring the probe removes the
+   * request from every page load and the asymmetry with it.
+   *
+   * Not in an effect either: it is a response to a click, and doing it here keeps the
+   * "fetch once, then cache" rule in one readable place.
+   */
+  const [checking, setChecking] = useState(false)
+
+  async function openPanel() {
+    setOpen(true)
+    if (status !== null || checking) return
+    setChecking(true)
+    try {
+      setStatus(await getAssistantStatus())
+    } catch {
+      // A failure here means the feature is unusable, which is the same outcome as
+      // unconfigured - so it degrades to the same disabled state rather than an alarm.
+      setStatus({ configured: false, model: '' })
+    } finally {
+      setChecking(false)
     }
-  }, [isManager])
+  }
 
   // Keep the newest message in view as the conversation grows.
   useEffect(() => {
@@ -118,21 +131,15 @@ export function AssistantWidget() {
 
   return (
     <>
-      {/* Trigger. Stays visible but disabled when unconfigured, so the feature's existence
-          and the reason it is off are both discoverable. */}
+      {/* Always enabled now. Whether the assistant is configured is discovered on opening,
+          and the panel says so - a button disabled by a probe that has not run yet would
+          just look broken. */}
       {!open && (
         <button
           type="button"
-          onClick={() => setOpen(true)}
-          disabled={status === null}
-          title={
-            status === null
-              ? 'Checking the assistant…'
-              : configured
-                ? 'Ask the assistant'
-                : 'The assistant is not configured on this server'
-          }
-          className="fixed right-4 bottom-4 z-40 flex items-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-2xl shadow-brand-950/50 transition hover:bg-brand-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:right-6 sm:bottom-6"
+          onClick={openPanel}
+          title="Ask the assistant"
+          className="fixed right-4 bottom-4 z-40 flex items-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-2xl shadow-brand-950/50 transition hover:bg-brand-500 active:scale-[0.98] sm:right-6 sm:bottom-6"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true" className="size-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 10.5h8M8 14h5m-8 6 3.2-2.4A2 2 0 0 1 9.4 17H18a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v13Z" />
@@ -150,7 +157,13 @@ export function AssistantWidget() {
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-ink-100">Assistant</h2>
               <p className="truncate text-xs text-ink-500">
-                {configured ? `Answers from your team's reports · ${status?.model}` : 'Not configured'}
+                {/* Three states, not two: before the probe answers, "Not configured" would be
+                    a claim we cannot yet make. */}
+                {checking
+                  ? 'Checking…'
+                  : configured
+                    ? `Answers from your team's reports · ${status?.model}`
+                    : 'Not configured'}
               </p>
             </div>
             <button
@@ -166,7 +179,15 @@ export function AssistantWidget() {
           </header>
 
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-            {!configured ? (
+            {checking ? (
+              <div className="flex items-center gap-2 text-sm text-ink-500">
+                <span
+                  aria-hidden="true"
+                  className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                />
+                Checking the assistant…
+              </div>
+            ) : !configured ? (
               <div className="rounded-lg bg-amber-500/10 px-3.5 py-3 text-sm text-amber-200 ring-1 ring-inset ring-amber-500/25">
                 <p className="font-medium">The assistant is not configured.</p>
                 <p className="mt-1 text-amber-200/80">

@@ -26,6 +26,7 @@ import com.technical.task.weeklyreportbackend.exception.DuplicateReportException
 import com.technical.task.weeklyreportbackend.exception.IllegalReportTransitionException;
 import com.technical.task.weeklyreportbackend.exception.InvalidReportContentException;
 import com.technical.task.weeklyreportbackend.exception.ProjectChangeNotAllowedException;
+import com.technical.task.weeklyreportbackend.exception.ReportNotDeletableException;
 import com.technical.task.weeklyreportbackend.exception.ReportNotFoundException;
 import com.technical.task.weeklyreportbackend.exception.ReportNotSubmittableException;
 import com.technical.task.weeklyreportbackend.mapper.ReportMapper;
@@ -165,6 +166,47 @@ public class ReportService {
         reportRepository.save(report);
 
         return buildDetail(report, current, actor);
+    }
+
+    /**
+     * Deletes one of the caller's own drafts, and nothing else.
+     *
+     * <h2>Why only a draft</h2>
+     * A draft is private working notes: nobody else has ever seen it, no manager has acted on
+     * it, and it has no frozen versions and no review comments. Removing one destroys nothing
+     * anybody relies on.
+     *
+     * <p>Everything past that point is part of the review record. Once a report is submitted
+     * it may carry an approval, a correction request, and a version history a manager can
+     * still open — deleting it would let an author erase a decision made about their work,
+     * and would silently move the dashboard's compliance figures for a past week. This is the
+     * same line {@code UserAdminService} draws for accounts: a user with reports can only be
+     * disabled, never deleted, because their authorship is part of the record.
+     *
+     * <h2>The status check is belt and braces</h2>
+     * No transition in this application ever sets a report back to {@code DRAFT} — the status
+     * only moves forward — so {@code DRAFT} already implies "never submitted". The
+     * {@code lastSubmittedAt} check therefore cannot fire today; it is here so that if a
+     * future "unsubmit" or "withdraw" action is ever added, this method fails closed instead
+     * of quietly becoming a way to delete reviewed work.
+     *
+     * <h2>Children</h2>
+     * Every foreign key from {@code report_versions} down to the task, blocker, achievement,
+     * hours and review-comment tables is declared {@code ON DELETE CASCADE} in {@code V2}, so
+     * one delete is enough. Deleting the rows here in Java as well would duplicate a rule the
+     * schema already owns, and get out of step the first time a child table is added.
+     */
+    @Transactional
+    public void delete(Long reportId, User actor) {
+        // Locked and owner-checked by the same guard every mutating path uses: a peer's report
+        // is a 404, so ids cannot be probed through this endpoint either.
+        Report report = accessGuard.requireOwnedForUpdate(reportId, actor);
+
+        if (report.getStatus() != ReportStatus.DRAFT || report.getLastSubmittedAt() != null) {
+            throw new ReportNotDeletableException();
+        }
+
+        reportRepository.delete(report);
     }
 
     @Transactional(readOnly = true)
