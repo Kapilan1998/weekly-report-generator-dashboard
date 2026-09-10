@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ComponentPropsWithRef } from 'react'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
@@ -12,7 +12,13 @@ const VARIANTS: Record<Variant, string> = {
     'bg-red-600 text-white shadow-lg shadow-red-950/40 hover:bg-red-500 active:bg-red-700 focus-visible:outline-red-400',
 }
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+/**
+ * `ComponentPropsWithRef` rather than `ButtonHTMLAttributes`, so a caller can hold a ref to
+ * the underlying button — `ConfirmDialog` needs one to place initial focus. In React 19 `ref`
+ * is an ordinary prop on a function component, so it rides along in `...rest` and no
+ * `forwardRef` wrapper is needed.
+ */
+interface ButtonProps extends ComponentPropsWithRef<'button'> {
   variant?: Variant
   loading?: boolean
 }

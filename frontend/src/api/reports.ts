@@ -60,6 +60,14 @@ export function getVersion(id: number, versionNumber: number): Promise<ReportVer
   return request<ReportVersionDetail>(`/reports/${id}/versions/${versionNumber}`)
 }
 
+/**
+ * Deletes one of your own drafts. 409 for anything already submitted — a submitted report is
+ * part of the review record, so the backend refuses and the UI does not offer it.
+ */
+export function deleteReport(id: number): Promise<void> {
+  return request<void>(`/reports/${id}`, { method: 'DELETE' })
+}
+
 /** Manager only. Includes members with no report for the week. */
 export function getWeekStatus(weekStart: string): Promise<WeekStatus[]> {
   return request<WeekStatus[]>('/reports/week-status', { query: { weekStart } })
