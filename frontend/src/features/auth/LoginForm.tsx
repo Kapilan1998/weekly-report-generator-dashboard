@@ -4,6 +4,7 @@ import { login } from '../../api/auth'
 import { ApiError } from '../../api/client'
 import { Alert } from '../../components/Alert'
 import { Button } from '../../components/Button'
+import { PasswordField } from '../../components/PasswordField'
 import { TextField } from '../../components/TextField'
 import { useAuth } from '../../auth/useAuth'
 
@@ -63,11 +64,10 @@ export function LoginForm() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
         />
-        <TextField
+        <PasswordField
           label="Password"
           name="password"
           id="login-password"
-          type="password"
           autoComplete="current-password"
           placeholder="••••••••"
           required
