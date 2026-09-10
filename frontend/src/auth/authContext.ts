@@ -13,7 +13,11 @@ export interface AuthState {
   isAuthenticated: boolean
   isManager: boolean
   signIn: (response: AuthResponse) => void
-  signOut: () => void
+  /**
+   * `reason` is shown on the sign-in screen afterwards. Passed when the sign-out was not the
+   * user's own choice - an expired token, or access changed by a manager.
+   */
+  signOut: (reason?: string) => void
 }
 
 export const AuthContext = createContext<AuthState | null>(null)

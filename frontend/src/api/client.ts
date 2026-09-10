@@ -7,7 +7,7 @@
 const BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 let authToken: string | null = null
-let unauthorizedHandler: (() => void) | null = null
+let unauthorizedHandler: ((reason?: string) => void) | null = null
 
 export function setAuthToken(token: string | null): void {
   authToken = token
@@ -17,7 +17,7 @@ export function setAuthToken(token: string | null): void {
  * Registered by AuthProvider. Lives here rather than in a component because a token can
  * expire during any request, and every one of them needs the same response.
  */
-export function setUnauthorizedHandler(handler: (() => void) | null): void {
+export function setUnauthorizedHandler(handler: ((reason?: string) => void) | null): void {
   unauthorizedHandler = handler
 }
 
@@ -101,7 +101,13 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   if (!response.ok) {
     if (response.status === 401) {
-      unauthorizedHandler?.()
+      /*
+       * The server's own message is passed on, because the two situations that reach a 401
+       * need different words: an expired session, and access that a manager changed under
+       * the user. Being dropped at the login screen with no explanation reads as a bug -
+       * especially when it was deliberate.
+       */
+      unauthorizedHandler?.(toApiError(response.status, payload).message)
     }
     throw toApiError(response.status, payload)
   }
