@@ -318,8 +318,9 @@ the icon.
 **Expect:** The next field starts **masked** — the choice is not remembered, so a revealed
 password is never left on screen after you move on.
 
-> The toggle is on the sign-in and sign-up forms only. The three password fields on
-> **Profile & settings** do not have it yet — see K5/K6.
+> The toggle is on the sign-in and sign-up forms and on **User management → Add team
+> member** (J2). The three password fields on **Profile & settings** do not have it yet —
+> see K5/K6.
 
 ---
 
@@ -1039,6 +1040,9 @@ Manager window → **Projects**.
 | I3 | Duplicate name refused | `[ ]` |
 | I4 | Deactivate and reactivate | `[ ]` |
 | I5 | Delete only when unused | `[ ]` |
+| I6 | Search by name or description | `[ ]` |
+| I7 | Filter by status | `[ ]` |
+| I8 | Pagination, hover and mobile layout | `[ ]` |
 
 ### I1 — Create a project
 
@@ -1088,12 +1092,123 @@ a retired project.
 
 **Expect:** The button changes to **Confirm delete** with a **Cancel** beside it.
 
-3. Click **Confirm delete**.
+3. Click **Yes, delete**.
 
-**Expect:** A confirmation and the row disappears.
+**Expect:** The popup closes and the row disappears, with a confirmation naming the project.
 
 > Delete is only offered when the count is zero. A project that reports reference can only be
-> deactivated, because deleting it would orphan them.
+> deactivated, because deleting it would orphan them. The confirmation is the same popup the
+> draft delete uses (B11) — <kbd>Esc</kbd>, **No** and a click outside all cancel it.
+
+### I6 — Search by name or description
+
+1. Above the list is a **Search** box and a **Status** dropdown. Type `client` into Search.
+
+**Expect:** The list narrows as you type — no button to press. A line appears reading
+*Showing 1 of 5 projects*, with a **Clear filters** link.
+
+2. Clear the box and type a word that appears only in a project's **description**, not its
+   name — e.g. `automation` (in *Internal Tooling*).
+
+**Expect:** That project still matches. The search covers **both** fields, because you won't
+remember which one carried the word.
+
+3. Type in mixed case, e.g. `CLIENT`.
+
+**Expect:** Still matches — the search is case-insensitive.
+
+4. Click the **×** at the right-hand end of the search box.
+
+**Expect:** The box empties, the full list returns, and the × disappears. It is only shown
+when there is something to clear.
+
+5. Type a term that matches nothing, e.g. `zzzz`.
+
+**Expect:** **No projects match** with a **Clear filters** button — *not* the "No projects
+yet / add one" empty state, which would be the wrong advice when projects exist.
+
+### I7 — Filter by status
+
+1. Set **Status** to **Inactive**.
+
+**Expect:** Only projects marked **Inactive**. If you deactivated one in I4, it is here.
+
+2. Set it to **Active**.
+
+**Expect:** The inactive one disappears.
+
+3. Combine them: **Status: Active** plus a search term.
+
+**Expect:** Both apply together — the list is what matches the term **and** is active.
+
+4. Click **Clear filters**.
+
+**Expect:** Search empties, Status returns to **All statuses**, and every project is listed.
+
+> Both filters run in the browser. `GET /projects/all` returns every project in one
+> unpaginated response, so filtering costs no request and updates as you type.
+
+### I8 — Pagination, hover and mobile layout
+
+The list shows **10 projects per page**.
+
+1. With fewer than 11 projects, look below the list.
+
+**Expect:** **No pagination control.** One that could only ever say "1 of 1" is noise. To see
+it, add enough projects to pass 10 (I1 a few times), or narrow nothing and count.
+
+2. With more than 10, look again.
+
+**Expect:** A pagination control with page numbers and a count. Click page 2 — the rows
+change and the control follows.
+
+3. On page 2, type a search term that matches only one project.
+
+**Expect:** You are put back on **page 1** of the new result, not left on an empty page 2.
+
+4. On the last page, delete the only project on it.
+
+**Expect:** The list falls back to the previous page rather than showing an empty one.
+
+5. Hover the mouse over any project row.
+
+**Expect:** The row background lightens and the **project name turns emerald green**, both
+eased rather than snapping. Moving away returns it.
+
+> Emerald rather than the brand violet: violet is what selection and primary actions use
+> throughout the app, so a violet hover would read as "selected".
+
+6. Hover each button on a row in turn.
+
+**Expect:** A different colour per action, and all four sit quiet and identical until pointed
+at:
+
+| Button | Hover |
+|---|---|
+| **Edit** | violet |
+| **Deactivate** (an active project) | amber |
+| **Activate** (an inactive one) | emerald |
+| **Delete** | red |
+
+> Activate and Deactivate are the same button, so its colour follows its label — amber for
+> taking something out of service, emerald for putting it back.
+
+7. Read one project's three lines of text.
+
+**Expect:** The **name** is the largest, the **description** is smaller, dimmer and
+*italic*, and the **report count** sits in a small recessed chip with a darker background.
+
+> The row itself is not clickable — the buttons are — so the highlight is a scanning aid.
+> That's why there is no pointer cursor: it would promise a click that does nothing.
+
+8. Open DevTools (<kbd>F12</kbd>) → device toolbar → 390 × 844.
+
+**Expect:** Search and Status stack vertically. Each project's **Edit / Deactivate / Delete**
+buttons sit on **their own line** beneath the name and description, not squeezed beside a
+wrapping name. Nothing is cut off at the right edge and the page does not scroll sideways.
+
+> Pagination is in the browser too, applied **after** filtering. Paging on the server while
+> filtering here would be actively wrong — the search would only ever see the current page.
 
 ---
 
@@ -1111,6 +1226,9 @@ Manager window → **User management**.
 | J6 | You cannot administer yourself | `[ ]` |
 | J7 | Delete only when the account has no reports | `[ ]` |
 | J8 | The last manager cannot be removed | `[ ]` |
+| J9 | Pagination, hover and button colours | `[ ]` |
+| J10 | Search, role and status filters | `[ ]` |
+| J11 | A change to access signs that user out at once | `[ ]` |
 
 ### J1 — The account list
 
@@ -1122,7 +1240,16 @@ state.
 1. Click **+ Add team member**.
 2. **Name:** `Temp Tester`, **Email:** `temp.tester@example.com`,
    **Initial password:** `Temp@1234`, **Role:** `Team member`.
-3. Click **Create account**.
+3. The **Initial password** field has an **eye icon**. Click it.
+
+**Expect:** The password becomes readable, the icon changes to a struck-through eye, and the
+form is **not** submitted. Click again to mask it.
+
+> It matters more here than on a sign-in form: a manager is typing a password they then have
+> to pass on to somebody else, so being unable to check it is exactly what causes the "it
+> doesn't work" follow-up.
+
+4. Click **Create account**.
 
 **Expect:** A confirmation and a new row with **0 reports**.
 
@@ -1172,9 +1299,22 @@ account is disabled".
 
 **Expect:** No **Delete** button — only **Disable**.
 
-2. On `Temp Tester` (0 reports), click **Delete** → **Confirm delete**.
+2. On `Temp Tester` (0 reports), click **Delete**.
 
-**Expect:** A confirmation and the row disappears.
+**Expect:** A popup centred on a dimmed page: *Delete Temp Tester?* with the account's email,
+a note that it has filed no reports so nothing loses its author, and **No** / **Yes, delete**.
+
+3. Click **No**, then <kbd>Esc</kbd>, then a click outside the popup.
+
+**Expect:** All three cancel it and nothing is deleted.
+
+4. Reopen it and click **Yes, delete**.
+
+**Expect:** The button reads *Deleting…*, the popup closes, and the row disappears with a
+confirmation naming the account.
+
+> Same popup as the draft delete (B11) and the project delete (I5) — a destructive action asks
+> the same way everywhere in the app.
 
 ### J8 — The last manager cannot be removed
 
@@ -1186,6 +1326,150 @@ manager. Nothing changes.
 
 > Skip this if you have several managers and would rather not reshuffle them — but it is
 > worth one attempt, because it is the guard that prevents locking everyone out.
+
+### J9 — Pagination, hover and button colours
+
+The account list shows **10 per page**, and behaves like the Projects list (I8) on purpose —
+the two admin pages should not feel different under the pointer.
+
+1. With 10 or fewer accounts, look below the list.
+
+**Expect:** No pagination control. With more than 10, page numbers and a count appear; click
+page 2 and the rows change.
+
+2. Delete the only account on the last page.
+
+**Expect:** The list falls back to the previous page rather than showing an empty one.
+
+3. Hover any account row.
+
+**Expect:** The background lightens and the **name turns emerald green**, eased rather than
+snapping.
+
+4. Hover the **name** itself.
+
+**Expect:** It also gains an **underline** — it is the one thing in the row that navigates,
+so direct hover stays distinguishable from the row highlight.
+
+5. Hover each button on somebody else's row.
+
+**Expect:** A colour per action, all quiet until pointed at:
+
+| Button | Hover |
+|---|---|
+| **Disable** (an enabled account) | amber |
+| **Enable** (a disabled one) | emerald |
+| **Delete** | red |
+
+> Disable and Enable are the same button, so its colour follows its label — amber for taking
+> an account out of service, emerald for restoring it. Same rule as Deactivate/Activate on
+> Projects.
+
+6. Look at **your own** row.
+
+**Expect:** No buttons at all — just *"Manager · your own account"*. The hover highlight still
+works, but there is nothing to colour.
+
+7. At 390 × 844, look at another account's row.
+
+**Expect:** The role dropdown and buttons sit on **their own line** below the name and email,
+not squeezed beside them.
+
+### J10 — Search, role and status filters
+
+Above the list are a **Search** box, a **Role** dropdown and a **Status** dropdown.
+
+1. Type part of an account's **name** into Search.
+
+**Expect:** The list narrows as you type. A line appears reading *Showing 1 of 12 accounts*
+with a **Clear filters** link.
+
+2. Clear it, then type part of an **email** instead — e.g. `dana.tester`.
+
+**Expect:** That account matches. The search covers **both** name and email.
+
+> Both, because two people can share a name in this app — the list disambiguates them by
+> email — so searching only names would leave the one case you most need to search for
+> unreachable.
+
+3. Type in mixed case, e.g. `DANA`.
+
+**Expect:** Still matches; the search is case-insensitive.
+
+4. Click the **×** at the right of the search box.
+
+**Expect:** The box empties and the full list returns. The × only appears when there is
+something to clear.
+
+5. Set **Role** to **Manager**.
+
+**Expect:** Only manager accounts. Set it to **Team member** — the managers disappear.
+
+6. Set **Status** to **Disabled**.
+
+**Expect:** Only disabled accounts. If you re-enabled everyone in J4, this is empty — see
+step 8.
+
+7. Combine all three: a search term, **Role: Team member**, **Status: Enabled**.
+
+**Expect:** All three apply together. **Clear filters** resets every one of them and returns
+to page 1.
+
+8. Filter to something that matches nothing.
+
+**Expect:** **No accounts match** with a **Clear filters** button — *not* the bare
+"No accounts" empty state, which would wrongly suggest the database is empty.
+
+9. With a filter applied that leaves more than 10 results, page to 2, then narrow the search.
+
+**Expect:** You are returned to **page 1** of the new result, not left on an empty page 2.
+
+10. At 390 × 844, look at the filter bar.
+
+**Expect:** All four controls **stack vertically**, each full width. At tablet width the two
+dropdowns sit side by side; on a wide screen the search takes the remaining space.
+
+### J11 — A change to access signs that user out at once
+
+You need **two browser windows**: the manager in one, the affected member signed in in the
+other.
+
+1. In the member window, sign in as `alice@example.com` and stay on **My reports**.
+2. In the manager window, change Alice's **Role** to **Manager**.
+3. Back in the member window, click anything — **My reports**, **Profile & settings**.
+
+**Expect:** You are signed out and land on the sign-in screen, showing an **info banner**:
+*"Your access was changed, so you have been signed out. Please sign in again."*
+
+4. Sign in again as Alice.
+
+**Expect:** It works, and the sidebar now shows the **manager** entries — the new role is
+picked up on the way back in.
+
+5. Repeat with **Disable** instead of a role change.
+
+**Expect:** The next request signs them out the same way. Signing back in is refused with
+*Invalid email or password* while the account stays disabled.
+
+6. Re-enable the account and sign in.
+
+**Expect:** It works again.
+
+7. Now the case that must **not** log anyone out: with the member signed in, open the manager
+   window and set Alice's role to the role she **already has**.
+
+**Expect:** Nothing happens to her session — she keeps working. A manager glancing at the
+list and re-saving a row must not end somebody's session.
+
+> **How it works.** A JWT cannot be revoked once signed, so each token carries a
+> `tokenVersion` claim and `JwtAuthFilter` compares it against the account's row on every
+> request. Changing a role or the enabled flag bumps that column (migration `V4`), which
+> invalidates every token already issued for the account. The 401 body says *why*, so the
+> sign-in screen can explain it rather than dumping the user there for no visible reason.
+>
+> Before this, the backend already applied the *new* role on the next request — authorities
+> come from the database, not the token — but the session carried on and the sidebar kept
+> showing the old role until the token expired, up to an hour later.
 
 ---
 
@@ -1290,6 +1574,30 @@ unchanged.
 5. Sign in with `Test@5678`.
 
 **Expect:** It works.
+
+6. Now the part that matters. Sign in as the **same account in a second browser window**, so
+   it has two live sessions. In the first window, change the password again.
+
+**Expect:** The window you changed it in **stays signed in**. Click around — it works.
+
+7. Switch to the second window and click anything.
+
+**Expect:** It is signed out, landing on the sign-in screen with *"Your access was changed,
+so you have been signed out. Please sign in again."*
+
+> That is the point of a password change: the usual reason is believing somebody else has it,
+> and a change that leaves their session running for another hour does not achieve what you
+> asked for. The token version is bumped **before** the replacement token is minted, which is
+> what keeps the window you used signed in.
+
+8. Try a **wrong** current password from one window, then check the other.
+
+**Expect:** Neither is signed out. A typo in a form must not end sessions elsewhere.
+
+9. Edit your **name or email** (K2) with two sessions open.
+
+**Expect:** Neither is signed out. Renaming yourself is not a credential change, so it has no
+business ending sessions elsewhere — the fresh token there is only about the new subject.
 
 ### K7 — Role is read-only
 
@@ -1561,6 +1869,13 @@ Useful extras when you have them:
 | BUG-04 | B11 | The delete popup opened in the top-left corner instead of centred | **Fixed** — Tailwind preflight's `margin: 0` overrode the UA rule that centres a modal `<dialog>` |
 | BUG-05 | B11 | The popup could not be closed, and was left reading *Delete 0 drafts?* after a delete | **Fixed** — rebuilt as a portal overlay that unmounts when closed, so closing is not a state to get wrong |
 | BUG-06 | B11 | Confirming the delete left the row in place | **Not a code bug** — the backend predated the endpoint. But the wrong HTTP method returned `500 Something went wrong`, which hid it, so that is now a 405 |
+| BUG-15 | J7 | Deleting an account used an inline button swap rather than the confirmation popup used elsewhere | **Fixed** — now the same `ConfirmDialog` as the draft and project deletes |
+| BUG-14 | K6 | Changing your password left sessions on other devices working for up to an hour — the usual reason for changing it is that someone else has it | **Fixed** — the password change now bumps the token version too, revoking every other session while keeping the one that made the change |
+| BUG-13 | J11 | A role or status change did not take effect until the token expired, up to an hour later, and the sidebar kept showing the old role | **Fixed** — a `tokenVersion` claim checked on every request; changing role or enabled invalidates existing tokens and the sign-in screen says why |
+| BUG-12 | J10 | User management had no way to search or filter a 12-account list | **Added** — search over name and email, plus Role and Status dropdowns, all filtering in the browser |
+| BUG-11 | J9 | User management was unpaginated and had no hover feedback on rows or buttons | **Added** — 10 per page, a row hover state, and a colour per action. `RowButton` extracted to a shared component so the tones are defined once |
+| BUG-10 | I8 | The Projects list was unpaginated, had no hover feedback, and squeezed its action buttons on a phone | **Added** — 10 per page (after filtering), a row hover state, and actions on their own line below `sm` |
+| BUG-09 | I6 | Projects had no way to search or filter, so a long list had to be read top to bottom | **Added** — search over name and description with a clear button, plus a status dropdown |
 | BUG-08 | N1 | As a manager, a mistyped URL redirected to the login page instead of showing the 404 page; a team member saw it correctly | **Fixed** — the assistant status probe ran on every page load and 401'd on an expired token, signing the user out. It now runs when the panel opens |
 | BUG-07 | F8 | The dashboard's ACTION column was blank for Draft and Approved rows | **Not a bug** — Review only applies to a submitted peer report. But blank read as unfinished, so the cell now shows **Open** or **Private until submitted** |
 
@@ -1576,6 +1891,16 @@ Useful extras when you have them:
 | 2026-09-09 | **Fixed:** §3 now records the three accounts on this machine with a working password, verified through `POST /api/auth/login`, plus the two places Parts B–D differ when reusing an account that already has reports. |
 | 2026-09-09 | **Fixed again:** the working credentials are now the first thing in §3, and the demo-account table is labelled as not applying to this machine. Testers were reaching the demo table first and hitting 401 twice. |
 | 2026-09-10 | **Added (BUG-03):** drafts can now be deleted — checkboxes and select-all on My reports, `DELETE /api/reports/{id}` on the backend, refused with 409 for anything already submitted. Added tests B11 and B12. |
+| 2026-09-10 | **Added:** the show/hide toggle now covers the **Initial password** field on User management's add-account form. J2 gained a step for it. Profile & settings' three password fields still lack it. |
+| 2026-09-10 | **Changed (BUG-15):** deleting an account now uses the shared confirmation popup instead of an inline *Delete → Confirm delete* swap, so all three destructive actions in the app ask the same way. J7 rewritten. |
+| 2026-09-10 | **Fixed (BUG-14):** a password change now signs out the account's other devices, using the token version added for BUG-13. The replacement token is minted after the bump, so the session that made the change survives. The profile page's claim that it *doesn't* end other sessions was user-facing and is corrected. K6 gained steps 6-9. |
+| 2026-09-10 | **Added (BUG-13):** changing a user's role or enabled flag now ends their session immediately. Adds migration `V4` (`users.token_version`), a `tokenVersion` JWT claim checked in `JwtAuthFilter`, a bump in `UserAdminService.update` only when something actually changed, and an explanatory notice on the sign-in screen. 11 new tests. Added test J11. |
+| 2026-09-10 | **Added (BUG-12):** User management gained a search box (name **or** email, with a clear button) and Role / Status dropdowns. All three combine, reset pagination to page 1, and have their own no-match empty state. Added test J10. |
+| 2026-09-10 | **Added (BUG-11):** User management is paginated at 10 per page, rows have a hover state, and Disable/Enable/Delete each have their own hover colour. `RowButton` moved to `components/RowButton.tsx` — both admin pages had their own copy, which would have meant maintaining the tone table twice. Added test J9. |
+| 2026-09-10 | **Changed:** Projects row styling — a hover colour per action (Edit violet, Deactivate amber, Activate emerald, Delete red), a larger project name, an italic dimmed description, and the report count in a recessed chip. I8 steps 6-7 added. |
+| 2026-09-10 | **Changed:** the project-name hover colour is emerald rather than brand violet, so hover cannot be mistaken for selection. |
+| 2026-09-10 | **Added (BUG-10):** Projects is now paginated at 10 per page, applied after the filters and clamped during render so narrowing a search or deleting the last row on a page cannot leave you on an empty one. Rows gained a hover state, and the action buttons drop to their own line on a phone. Added test I8. |
+| 2026-09-10 | **Added (BUG-09):** Projects now has a search box (name **or** description, with a clear button) and an Active/Inactive dropdown, both filtering in the browser. Its delete also moved to the same confirmation popup as the draft delete. Added tests I6 and I7; I5 step 3 updated. |
 | 2026-09-10 | **Fixed (BUG-08):** the assistant widget probed its status endpoint on every full page load, so on an expired session a manager hitting the 404 page was signed out and redirected to login — a team member was unaffected because that page makes no API calls. The probe is now deferred to when the panel is opened. Updated N1, M1 and M5. |
 | 2026-09-10 | **Improved (BUG-07):** the dashboard's ACTION column was empty for any row that could not be reviewed, which looked unfinished. It now shows **Review**, **Open**, or **Private until submitted** — the last is not a link, because a peer's draft is refused by the backend. Added test F8. |
 | 2026-09-10 | **Fixed (BUG-06):** a wrong HTTP method fell through to the catch-all handler and became `500 Something went wrong`, so a frontend calling DELETE against a backend that had not been restarted looked like a broken server. It is now a 405 naming the allowed methods. Added three integration tests covering the whole delete path through the real filter chain — unit tests all passed because none of them goes through the dispatcher. Added a Troubleshooting entry for stale-backend symptoms. |
