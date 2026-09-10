@@ -33,6 +33,8 @@ public class JwtService {
                 .subject(user.getEmail())
                 .claim("userId", user.getId())
                 .claim("role", user.getRole().name())
+                // The account's access version at the moment of issue. See User.tokenVersion.
+                .claim("tokenVersion", user.getTokenVersion())
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(signingKey)
@@ -45,6 +47,20 @@ public class JwtService {
 
     public boolean isTokenValid(String token, String expectedEmail) {
         return expectedEmail.equals(extractEmail(token)) && !isTokenExpired(token);
+    }
+
+    /**
+     * The access version the token was minted with, or {@code -1} when the claim is absent.
+     *
+     * <p>-1 rather than 0, deliberately. A token issued before this claim existed has no
+     * version, and treating that as 0 would silently accept it against a fresh account whose
+     * version is also 0. Returning a value no account can ever hold means such a token is
+     * rejected and its holder signs in again - the safe direction for a claim whose whole
+     * purpose is revocation.
+     */
+    public int extractTokenVersion(String token) {
+        Object claim = extractAllClaims(token).get("tokenVersion");
+        return claim instanceof Number number ? number.intValue() : -1;
     }
 
     private boolean isTokenExpired(String token) {

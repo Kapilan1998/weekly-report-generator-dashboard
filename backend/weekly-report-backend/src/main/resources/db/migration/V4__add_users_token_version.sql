@@ -1,0 +1,18 @@
+-- Lets a manager's change to somebody's access take effect at once, instead of whenever
+-- their token happens to expire.
+--
+-- A JWT is stateless: once issued there is nothing to revoke, so a role change or a disable
+-- only bites when the token runs out - up to an hour later on this configuration. The usual
+-- fix is a version number the token carries and the server checks.
+--
+-- Every token is minted with the account's current token_version as a claim. JwtAuthFilter
+-- compares that claim against this column on every request, and a mismatch is rejected as
+-- unauthenticated. Bumping the column therefore invalidates every token already issued for
+-- that account, and the holder is asked to sign in again.
+--
+-- INT rather than BIGINT: this only ever counts a manager's administrative actions against
+-- one account, so four billion is not a limit worth planning around.
+--
+-- DEFAULT 0 so every account and every token already in circulation stays valid when this
+-- migration runs - nobody is logged out by the upgrade itself.
+ALTER TABLE users ADD COLUMN token_version INT NOT NULL DEFAULT 0;
