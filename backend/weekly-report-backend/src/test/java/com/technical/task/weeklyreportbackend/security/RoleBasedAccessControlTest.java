@@ -217,6 +217,77 @@ class RoleBasedAccessControlTest {
         assertThat(userRepository.findByEmail("nope@test.local")).isEmpty();
     }
 
+    /**
+     * The delete lifecycle end to end, through the real filter chain. Added after a stale
+     * backend made a missing DELETE mapping look like a 500: every unit test passed, because
+     * none of them goes through the dispatcher.
+     */
+    @Test
+    @DisplayName("a member can delete their own draft, and nothing else")
+    void draftDeleteLifecycle() throws Exception {
+        long draft = createDraft(aliceToken, currentMonday());
+
+        // A peer cannot delete it - and gets 404, the same answer a missing id gives, so ids
+        // cannot be probed through this endpoint either.
+        mockMvc.perform(delete("/api/reports/{id}", draft).header("Authorization", bearer(bobToken)))
+                .andExpect(status().isNotFound());
+        assertThat(reportRepository.findById(draft)).isPresent();
+
+        // Nor can a manager: this endpoint is about your own drafts, and a manager reviewing
+        // the team is not an owner.
+        mockMvc.perform(delete("/api/reports/{id}", draft).header("Authorization", bearer(managerToken)))
+                .andExpect(status().isNotFound());
+        assertThat(reportRepository.findById(draft)).isPresent();
+
+        // The owner can.
+        mockMvc.perform(delete("/api/reports/{id}", draft).header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isNoContent());
+        assertThat(reportRepository.findById(draft)).isEmpty();
+
+        // Gone means gone: a second delete is a 404, not a silent success.
+        mockMvc.perform(delete("/api/reports/{id}", draft).header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("a submitted or approved report cannot be deleted, and survives the attempt")
+    void submittedReportCannotBeDeleted() throws Exception {
+        long report = createDraft(aliceToken, currentMonday());
+        submit(aliceToken, report);
+
+        mockMvc.perform(delete("/api/reports/{id}", report).header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isConflict());
+        assertThat(reportRepository.findById(report)).isPresent();
+
+        // And once approved it is still refused - the report surviving is the part that
+        // matters for the audit trail.
+        approve(managerToken, report);
+        mockMvc.perform(delete("/api/reports/{id}", report).header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isConflict());
+        assertThat(reportRepository.findById(report)).isPresent();
+    }
+
+    @Test
+    @DisplayName("the wrong HTTP method is 405, not 500")
+    void wrongMethodIsMethodNotAllowed() throws Exception {
+        /*
+         * The regression that hid a real problem. A frontend calling DELETE against a backend
+         * that had not been restarted got "500 Something went wrong", which reads as a server
+         * fault rather than a missing deployment. A wrong method is the caller's error.
+         *
+         * /api/profile/password is used rather than something under /api/reports because that
+         * controller maps DELETE /{id}: `DELETE /api/reports/mine` binds "mine" to a Long,
+         * fails conversion and comes back 400, so it never reaches the method check at all.
+         * ProfileController has no path variable, so there is nothing for DELETE to match.
+         */
+        mockMvc.perform(delete("/api/profile/password").header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isMethodNotAllowed());
+
+        // And the 400 above is worth pinning too, so the two are not confused later.
+        mockMvc.perform(delete("/api/reports/mine").header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     @DisplayName("an unauthenticated request is 401, not a bare 403")
     void unauthenticatedRequestIsUnauthorized() throws Exception {
