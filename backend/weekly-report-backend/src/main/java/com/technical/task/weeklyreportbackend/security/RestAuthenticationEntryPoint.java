@@ -33,7 +33,12 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         body.put("timestamp", Instant.now().toString());
         body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
         body.put("error", "Unauthorized");
-        body.put("message", "Authentication is required to access this resource");
+        // Two different situations reach a 401, and they need different action from the
+        // reader: "sign in" versus "your access was changed, sign in again to pick it up".
+        boolean accessChanged = Boolean.TRUE.equals(request.getAttribute(JwtAuthFilter.ACCESS_CHANGED));
+        body.put("message", accessChanged
+                ? "Your access was changed, so you have been signed out. Please sign in again."
+                : "Authentication is required to access this resource");
 
         objectMapper.writeValue(response.getOutputStream(), body);
     }

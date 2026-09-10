@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { setAuthToken, setUnauthorizedHandler } from '../api/client'
+import { rememberSignOutReason } from './signOutReason'
 import type { AuthResponse } from '../types/api'
 import { AuthContext } from './authContext'
 import type { AuthUser } from './authContext'
@@ -46,7 +47,7 @@ if (restored) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(restored?.user ?? null)
 
-  const signOut = useCallback(() => {
+  const signOut = useCallback((reason?: string) => {
     setAuthToken(null)
     setUser(null)
     try {
@@ -54,6 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Nothing to do - the in-memory token is already gone, which is what matters.
     }
+    // Outside the try: storing the reason has its own failure handling, and losing it must
+    // not depend on whether clearing localStorage happened to throw first.
+    rememberSignOutReason(reason)
   }, [])
 
   const signIn = useCallback((response: AuthResponse) => {

@@ -56,6 +56,23 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    /**
+     * Bumped whenever a manager changes this account's role or enabled flag, which
+     * invalidates every token already issued for it.
+     *
+     * <p>A JWT cannot be revoked - once signed it is valid until it expires - so the token
+     * carries this number as a claim and {@code JwtAuthFilter} compares it against the row on
+     * every request. A mismatch is treated as unauthenticated, so the holder is asked to sign
+     * in again and picks up their new role on the way back.
+     *
+     * <p>{@code @Builder.Default} for the same reason as {@code enabled}: Lombok would
+     * otherwise default the primitive to 0, which happens to be right today but would break
+     * silently the moment the starting value changed.
+     */
+    @Builder.Default
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

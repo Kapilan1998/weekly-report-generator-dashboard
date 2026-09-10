@@ -6,6 +6,7 @@ import { Alert } from '../../components/Alert'
 import { Button } from '../../components/Button'
 import { PasswordField } from '../../components/PasswordField'
 import { TextField } from '../../components/TextField'
+import { takeSignOutReason } from '../../auth/signOutReason'
 import { useAuth } from '../../auth/useAuth'
 
 interface RedirectState {
@@ -21,6 +22,14 @@ export function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  /*
+   * Why the last sign-out happened, if it was not the user's own doing - an expired token, or
+   * a manager changing their role or access. Read in a state initialiser so it is consumed
+   * exactly once on mount: an effect would run twice under React's strict mode and clear the
+   * message before it was ever rendered.
+   */
+  const [signedOutReason] = useState(takeSignOutReason)
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -51,7 +60,13 @@ export function LoginForm() {
         // Dims and blocks the form while the request is in flight.
         className={`mt-6 space-y-4 transition-opacity duration-200 ${submitting ? 'pointer-events-none opacity-60' : ''}`}
       >
-        {error && <Alert>{error}</Alert>}
+        {/* The sign-out notice steps aside once there is a real error from this form -
+            two stacked banners about different things is noise. */}
+        {error ? (
+          <Alert>{error}</Alert>
+        ) : (
+          signedOutReason && <Alert tone="info">{signedOutReason}</Alert>
+        )}
 
         <TextField
           label="Email"

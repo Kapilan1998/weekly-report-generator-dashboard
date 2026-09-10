@@ -239,4 +239,61 @@ class ProfileServiceTest {
         assertThrows(UserNotFoundException.class, () -> profileService.changePassword(
                 new ChangePasswordRequest("Str0ng!Current", "Str0ng!New"), actor()));
     }
+
+    @Test
+    void changePasswordSignsOutTheOtherDevicesButNotThisOne() {
+        User stored = actor();
+        Mockito.when(userRepository.findById(7L)).thenReturn(Optional.of(stored));
+        Mockito.when(passwordEncoder.matches(Mockito.anyString(), Mockito.anyString())).thenReturn(true);
+        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("$2a$10$newHash");
+        Mockito.when(jwtService.generateToken(Mockito.any(User.class))).thenReturn("fresh-jwt");
+        stubSaveReturningTheArgument();
+
+        profileService.changePassword(
+                new ChangePasswordRequest("Str0ng!Current", "Str0ng!New"), actor());
+
+        // Bumped, so every token issued before now is rejected by JwtAuthFilter.
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        Mockito.verify(userRepository).save(saved.capture());
+        assertEquals(1, saved.getValue().getTokenVersion());
+
+        /*
+         * And the ordering is the part that matters: the token handed back must be minted
+         * from the already-bumped user, or the caller would be signing themselves out by
+         * changing their own password. Asserting the version on the instance passed to
+         * generateToken is what pins that - a bump moved after this call would still leave
+         * the assertion above passing.
+         */
+        ArgumentCaptor<User> tokenFor = ArgumentCaptor.forClass(User.class);
+        Mockito.verify(jwtService).generateToken(tokenFor.capture());
+        assertEquals(1, tokenFor.getValue().getTokenVersion());
+    }
+
+    @Test
+    void aRefusedPasswordChangeDoesNotSignAnybodyOut() {
+        User stored = actor();
+        Mockito.when(userRepository.findById(7L)).thenReturn(Optional.of(stored));
+        Mockito.when(passwordEncoder.matches("wrong", "$2a$10$currentHash")).thenReturn(false);
+
+        assertThrows(IncorrectPasswordException.class, () -> profileService.changePassword(
+                new ChangePasswordRequest("wrong", "Str0ng!New"), actor()));
+
+        // A typo in the form must not end sessions on the account's other devices.
+        assertEquals(0, stored.getTokenVersion());
+    }
+
+    @Test
+    void updateProfileLeavesTheTokenVersionAlone() {
+        // Renaming yourself or changing your email is not a credential change, so it has no
+        // business ending sessions elsewhere - the fresh token is only about the new subject.
+        User stored = actor();
+        Mockito.when(userRepository.findById(7L)).thenReturn(Optional.of(stored));
+        Mockito.when(userRepository.existsByEmail(Mockito.anyString())).thenReturn(false);
+        Mockito.when(jwtService.generateToken(Mockito.any(User.class))).thenReturn("fresh-jwt");
+        stubSaveReturningTheArgument();
+
+        profileService.updateProfile(new UpdateProfileRequest("Alice Renamed", "a@example.com"), actor());
+
+        assertEquals(0, stored.getTokenVersion());
+    }
 }

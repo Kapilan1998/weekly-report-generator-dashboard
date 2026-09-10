@@ -70,6 +70,7 @@ public class UserAdminService {
         User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
         boolean roleChanged = user.getRole() != request.role();
+        boolean enabledChanged = user.isEnabled() != Boolean.TRUE.equals(request.enabled());
         boolean beingDisabled = !Boolean.TRUE.equals(request.enabled());
 
         // Compared by id: the actor comes from the JWT filter and is a detached entity.
@@ -87,6 +88,22 @@ public class UserAdminService {
 
         user.setRole(request.role());
         user.setEnabled(Boolean.TRUE.equals(request.enabled()));
+
+        /*
+         * Bumping the token version invalidates every token already issued for this account,
+         * so the change takes effect on the holder's next request instead of whenever their
+         * token happens to expire - up to an hour later. They are signed out, and pick up the
+         * new role when they sign back in.
+         *
+         * Only on an actual change. Saving the form with nothing altered must not log
+         * somebody out, and a manager re-selecting the role a member already has is exactly
+         * that. It is also why enabledChanged compares against the stored value rather than
+         * reusing beingDisabled, which is true every time the form is saved for an account
+         * that was already disabled.
+         */
+        if (roleChanged || enabledChanged) {
+            user.setTokenVersion(user.getTokenVersion() + 1);
+        }
 
         return toDetail(userRepository.save(user));
     }

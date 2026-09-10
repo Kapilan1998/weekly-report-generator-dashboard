@@ -150,8 +150,8 @@ export function ProfilePage() {
             Sign out
           </Button>
           <p className="mt-3 text-xs text-ink-500">
-            Changing your password does not end sessions on your other devices — tokens are
-            stateless and stay valid until they expire.
+            Changing your password signs you out everywhere else. This session stays signed
+            in.
             {!isManager && ' Your role and access are set by a manager.'}
           </p>
           {isManager && (

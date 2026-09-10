@@ -269,4 +269,82 @@ class UserAdminServiceTest {
 
         assertThrows(UserNotFoundException.class, () -> userAdminService.delete(99L, manager()));
     }
+
+    // ---- token version: a change to access ends the holder's session ----
+
+    @Test
+    void updateBumpsTheTokenVersionWhenTheRoleChanges() {
+        User member = user(1L, "Alice Member", Role.TEAM_MEMBER, true);
+        Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(member));
+        Mockito.when(userRepository.save(Mockito.any(User.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        Mockito.when(reportRepository.countByUserId(1L)).thenReturn(0L);
+
+        userAdminService.update(1L, new UpdateUserRequest(Role.MANAGER, true), manager());
+
+        // Every token already issued for this account now carries a stale version, so the
+        // promotion takes effect on their next request instead of up to an hour later.
+        assertEquals(1, member.getTokenVersion());
+    }
+
+    @Test
+    void updateBumpsTheTokenVersionWhenTheAccountIsDisabled() {
+        User member = user(1L, "Alice Member", Role.TEAM_MEMBER, true);
+        Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(member));
+        Mockito.when(userRepository.save(Mockito.any(User.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        Mockito.when(reportRepository.countByUserId(1L)).thenReturn(0L);
+
+        userAdminService.update(1L, new UpdateUserRequest(Role.TEAM_MEMBER, false), manager());
+
+        assertEquals(1, member.getTokenVersion());
+    }
+
+    @Test
+    void updateBumpsTheTokenVersionWhenTheAccountIsReEnabled() {
+        User member = user(1L, "Alice Member", Role.TEAM_MEMBER, false);
+        Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(member));
+        Mockito.when(userRepository.save(Mockito.any(User.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        Mockito.when(reportRepository.countByUserId(1L)).thenReturn(0L);
+
+        userAdminService.update(1L, new UpdateUserRequest(Role.TEAM_MEMBER, true), manager());
+
+        assertEquals(1, member.getTokenVersion());
+    }
+
+    @Test
+    void updateLeavesTheTokenVersionAloneWhenNothingChanged() {
+        /*
+         * The case that makes this feature tolerable to use. Saving the form without altering
+         * anything - or re-selecting the role a member already has - must not sign them out.
+         * Bumping unconditionally would log somebody out every time a manager looked at their
+         * row and pressed save.
+         */
+        User member = user(1L, "Alice Member", Role.TEAM_MEMBER, true);
+        Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(member));
+        Mockito.when(userRepository.save(Mockito.any(User.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        Mockito.when(reportRepository.countByUserId(1L)).thenReturn(0L);
+
+        userAdminService.update(1L, new UpdateUserRequest(Role.TEAM_MEMBER, true), manager());
+
+        assertEquals(0, member.getTokenVersion());
+    }
+
+    @Test
+    void updateDoesNotBumpTheTokenVersionWhenItIsRefused() {
+        // A refused change must not end anyone's session as a side effect: the guard throws
+        // before anything is mutated, and this pins that ordering.
+        User onlyManager = user(2L, "Mia Manager", Role.MANAGER, true);
+        Mockito.when(userRepository.findById(2L)).thenReturn(Optional.of(onlyManager));
+        Mockito.when(userRepository.countByRoleAndEnabledTrue(Role.MANAGER)).thenReturn(1L);
+
+        assertThrows(LastManagerException.class, () -> userAdminService.update(
+                2L, new UpdateUserRequest(Role.TEAM_MEMBER, true),
+                user(9L, "Other Manager", Role.MANAGER, true)));
+
+        assertEquals(0, onlyManager.getTokenVersion());
+        Mockito.verify(userRepository, Mockito.never()).save(Mockito.any(User.class));
+    }
 }

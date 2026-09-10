@@ -267,6 +267,94 @@ class RoleBasedAccessControlTest {
         assertThat(reportRepository.findById(report)).isPresent();
     }
 
+    /**
+     * The point of the token version: a manager's change to somebody's access takes effect on
+     * that person's very next request, rather than whenever their token happens to expire.
+     */
+    @Test
+    @DisplayName("changing a role invalidates that user's existing token")
+    void roleChangeEndsTheSession() throws Exception {
+        // Alice's token works before the change.
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isOk());
+
+        promote(alice.getId(), Role.MANAGER, true);
+
+        // Same token, now rejected - and the body says why, so the UI can explain the
+        // sign-out rather than dumping the user at a login screen for no visible reason.
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value(
+                        org.hamcrest.Matchers.containsString("access was changed")));
+
+        // Signing in again works and hands back the new role.
+        String fresh = login("alice@test.local");
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(fresh)))
+                .andExpect(status().isOk());
+        // Manager now, so a manager-only endpoint answers.
+        mockMvc.perform(get("/api/users").header("Authorization", bearer(fresh)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("disabling an account invalidates its token immediately")
+    void disableEndsTheSession() throws Exception {
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(bobToken)))
+                .andExpect(status().isOk());
+
+        promote(bob.getId(), Role.TEAM_MEMBER, false);
+
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(bobToken)))
+                .andExpect(status().isUnauthorized());
+
+        // And they cannot sign back in while disabled - same generic message as a wrong
+        // password, so the response does not confirm the address exists.
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"bob@test.local\",\"password\":\"" + PASSWORD + "\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("a change that alters nothing leaves the session alone")
+    void noOpUpdateKeepsTheSession() throws Exception {
+        // Re-saving the role a member already has must not log them out, or a manager
+        // glancing at the user list would end sessions by accident.
+        promote(alice.getId(), Role.TEAM_MEMBER, true);
+
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("changing your password signs out your other devices, not the one you used")
+    void passwordChangeEndsOtherSessions() throws Exception {
+        // Two sessions for the same account, as if signed in on two devices.
+        String otherDevice = login("alice@test.local");
+
+        MvcResult result = mockMvc.perform(put("/api/profile/password")
+                        .header("Authorization", bearer(aliceToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"" + PASSWORD
+                                + "\",\"newPassword\":\"Str0ng!New\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // The other device is out.
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(otherDevice)))
+                .andExpect(status().isUnauthorized());
+
+        // So is the token that made the request - but the response handed back a new one,
+        // which is what keeps the person who changed their password signed in.
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(aliceToken)))
+                .andExpect(status().isUnauthorized());
+
+        Matcher matcher = TOKEN.matcher(result.getResponse().getContentAsString());
+        assertThat(matcher.find()).isTrue();
+        mockMvc.perform(get("/api/reports/mine").header("Authorization", bearer(matcher.group(1))))
+                .andExpect(status().isOk());
+    }
+
     @Test
     @DisplayName("the wrong HTTP method is 405, not 500")
     void wrongMethodIsMethodNotAllowed() throws Exception {
@@ -592,6 +680,15 @@ class RoleBasedAccessControlTest {
             throw new IllegalStateException("create response carried no id");
         }
         return Long.parseLong(matcher.group(1));
+    }
+
+    /** A manager setting somebody's role and enabled flag, through the real endpoint. */
+    private void promote(long userId, Role role, boolean enabled) throws Exception {
+        mockMvc.perform(put("/api/users/{id}", userId)
+                        .header("Authorization", bearer(managerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"" + role.name() + "\",\"enabled\":" + enabled + "}"))
+                .andExpect(status().isOk());
     }
 
     private void submit(String token, long reportId) throws Exception {
