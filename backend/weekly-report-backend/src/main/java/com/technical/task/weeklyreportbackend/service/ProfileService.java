@@ -74,19 +74,22 @@ public class ProfileService {
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        User saved = userRepository.save(user);
 
         /*
-         * A new token, though nothing in it has changed — the subject is the email, which this
-         * method leaves alone, so the old one keeps working. It is issued anyway so the client
-         * has one uniform way to finish either edit, and so the fresh expiry reflects the
-         * moment the password changed.
+         * Bumping the token version signs out every other device this account is signed in
+         * on. That is the point of changing a password: the usual reason is believing someone
+         * else has it, and a change that leaves their session running for another hour does
+         * not achieve what the user asked for.
          *
-         * What this does NOT do is end the account's other sessions. Tokens are stateless and
-         * carry no version, so an already-issued one stays valid until it expires; revoking
-         * them would need a token version on the user row, checked in JwtAuthFilter. Noted as
-         * a future improvement rather than half-done.
+         * The order matters. The bump happens before the token below is minted, so the token
+         * the caller gets back carries the *new* version and their own session survives -
+         * they changed their password, they should not be thrown out for it. Every token
+         * issued before this moment now carries a stale version and is rejected by
+         * JwtAuthFilter on its next request.
          */
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        User saved = userRepository.save(user);
+
         return toAuthResponse(saved);
     }
 

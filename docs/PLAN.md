@@ -395,9 +395,11 @@ endpoint every signed-in user can reach. And the uniqueness check is skipped whe
 normalised email is unchanged; without that, the row collides with itself and every plain
 rename returns 409.
 
-**Not done, on purpose:** a password change does not end sessions on the account's other
-devices. Tokens are stateless and carry no version, so revoking them needs a token version on
-the user row checked in `JwtAuthFilter`. The page says so rather than implying otherwise.
+**A password change signs out the account's other devices.** It bumps
+`users.token_version` (migration `V4`), which invalidates every token already issued for the
+account; the token returned to the caller carries the new version, so the session that made
+the change survives. The version is bumped by a role or enabled change too — see
+`JwtAuthFilter`.
 
 ## Follow-up — week picker ✅ done (branch `feature/ai-assistant`)
 
