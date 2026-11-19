@@ -1,0 +1,10 @@
+# Files that run on Linux (the EC2 servers, inside containers) keep LF line endings even when
+# checked out on Windows with core.autocrlf=true. A CRLF shell script fails with
+# "$'\r': command not found", and nginx rejects a CRLF template in odd ways.
+*.sh          text eol=lf
+Jenkinsfile   text eol=lf
+Dockerfile    text eol=lf
+*.template    text eol=lf
+*.yml         text eol=lf
+*.env.example text eol=lf
+.env.example  text eol=lf
