@@ -471,7 +471,29 @@ Three things found by testing rather than reading docs:
 
 Optional throughout: with no key the status endpoint reports `configured: false`, the widget
 renders a disabled control explaining why, and the rest of the application is unaffected.
-- [ ] Deployment (publicly accessible instance)
+- [~] **Deployment** (branch `feature/docker-aws-deployment`) — containers, pipeline and AWS
+      runbook written; the AWS resources themselves are not created yet. Full guide:
+      **`docs/DEPLOYMENT.md`**.
+  - [x] `/actuator/health` (Spring Boot Actuator), public in `SecurityConfig` and pinned by an
+        RBAC test that also asserts the rest of `/actuator` stays locked
+  - [x] Backend `Dockerfile` (Maven build → JRE runtime, non-root, health check) and frontend
+        `Dockerfile` (Node build incl. lint + `tsc -b` → nginx, which proxies `/api`)
+  - [x] `docker-compose.yml` for local runs with MySQL; `deploy/docker-compose.prod.yml` for
+        EC2 with ECR images and RDS
+  - [x] `Jenkinsfile`: tests against throwaway MySQL → build → push to ECR → deploy over SSH;
+        `DEPLOY_EXISTING_TAG` parameter for rollback
+  - [x] `deploy/deploy.sh` with smoke test and automatic rollback; one-time server setup
+        scripts; IAM and ECR lifecycle policies
+  - [x] Images built and run locally with `docker compose up --build`, incl. a fresh-database
+        first boot; backend image optimised (Alpine JRE + layered jar: 163 → 124 MB
+        compressed). Work log and verification: `docs/DOCUMENTATION.md`
+  - [ ] AWS resources created (ECR, IAM roles, security groups, RDS, two EC2) and a first
+        successful pipeline run
+
+**Shape:** app EC2 (t3.small) runs the two containers, RDS MySQL 8.4 holds the data, a
+second EC2 runs Jenkins. Region `ap-south-1`. No AWS access keys exist anywhere — both
+servers use IAM instance roles — and app secrets live only in `app.env` on the app server,
+never in Jenkins. Images are tagged with the commit id, never `latest`.
 
 ## Phase 10 — Deliverables wrap-up
 - [x] Root README rewritten: current status, the four setup steps, the demo accounts table,
