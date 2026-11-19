@@ -23,6 +23,12 @@ Spring Boot 4 · Java 21 · MySQL 8 (Flyway) · React 19 · TypeScript · Tailwi
 | [`docs/PLAN.md`](docs/PLAN.md) | Phase-by-phase implementation log |
 | [`docs/AI_ASSISTANT.md`](docs/AI_ASSISTANT.md) | AI chat assistant: approach, prompt design, data privacy |
 | [`docs/diagrams/`](docs/diagrams/) | ER diagram as an image — PNG for slides, SVG for screen |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Docker images, the Jenkins pipeline, and step-by-step AWS setup (ECR, EC2, RDS) |
+| [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) | Work log for the deployment work: decisions, what was built, how it was verified |
+
+**Run it in containers instead:** with Docker Desktop running, `docker compose up --build`
+starts MySQL, the backend and the frontend together — open http://localhost:8081. No Java,
+Node or MySQL install needed. Details in `docs/DEPLOYMENT.md`.
 
 ---
 

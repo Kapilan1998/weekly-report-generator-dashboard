@@ -1,0 +1,63 @@
+# Run the whole application locally in containers - the same images Jenkins builds, with a
+# MySQL container standing in for RDS.
+#
+#   docker compose up --build        then open http://localhost:8081
+#   docker compose down              stop (data is kept in the mysql-data volume)
+#   docker compose down -v           stop and wipe the database
+#
+# Works with no .env file at all: every value below has a local default. Copy .env.example
+# to .env to override any of them. Production does NOT use this file - see
+# deploy/docker-compose.prod.yml.
+
+name: weekly-report
+
+services:
+  mysql:
+    # 8.4, matching the RDS engine version in production (see docs/DEPLOYMENT.md).
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local-root-password}
+      MYSQL_DATABASE: weekly_report_dashboard
+      MYSQL_USER: ${DB_USERNAME:-weekly_report}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-local-app-password}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # Over TCP on purpose: during first-time init the image runs a temporary server that
+      # listens on the socket only, so a socket ping would report ready too early.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build: ./backend/weekly-report-backend
+    image: weekly-report-backend:local
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # allowPublicKeyRetrieval: MySQL 8's default auth plugin needs it for a non-root user
+      # over an unencrypted connection. Fine on a private Docker network; production uses TLS.
+      DB_URL: jdbc:mysql://mysql:3306/weekly_report_dashboard?allowPublicKeyRetrieval=true&useSSL=false
+      DB_USERNAME: ${DB_USERNAME:-weekly_report}
+      DB_PASSWORD: ${DB_PASSWORD:-local-app-password}
+      JWT_SECRET: ${JWT_SECRET:-local-only-jwt-secret-local-only-jwt-secret}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      TZ: ${TZ:-Asia/Kolkata}
+    ports:
+      # Published only for poking at the API directly; the app itself goes through nginx.
+      - "127.0.0.1:8080:8080"
+
+  frontend:
+    build: ./frontend
+    image: weekly-report-frontend:local
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      # 8081 rather than 80, which is often taken on a dev machine.
+      - "${FRONTEND_PORT:-8081}:80"
+
+volumes:
+  mysql-data:
