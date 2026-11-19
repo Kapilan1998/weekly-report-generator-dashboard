@@ -32,9 +32,25 @@ Phases 1-5 and 3/3b are merged to `main`; Phase 6 is on branch `feature/manager-
 silently does nothing until the token expires.
 
 Phases 7 (seed data), 8 (RBAC tests) and the AI-chat half of Phase 9 are done too, as is the
-README/ER-diagram half of Phase 10. **Still to do:** deployment (optional), and the parts of
-Phase 10 only the user can do — slides, demo video, Drive folder — plus verifying the README
-against a genuinely clean checkout.
+README/ER-diagram half of Phase 10. **Still to do:** the AWS side of deployment, and the
+parts of Phase 10 only the user can do — slides, demo video, Drive folder — plus verifying the
+README against a genuinely clean checkout.
+
+### Deployment (branch `feature/docker-aws-deployment`)
+
+Read `docs/DEPLOYMENT.md` first. Docker images for both apps, `Jenkinsfile`, and EC2 + RDS +
+ECR in `ap-south-1`. Load-bearing rules:
+
+- **No AWS access keys, anywhere.** Jenkins and the app server use IAM instance roles. Don't
+  add an `aws configure` step or an AWS credential to Jenkins.
+- **App secrets live only in `/opt/weekly-report/app.env` on the app server**, never in
+  Jenkins, the compose file or the repo. Jenkins holds one secret: the SSH key `app-ec2-ssh`.
+- **Images are tagged with the commit id, never `latest`** — that is what makes
+  `DEPLOY_EXISTING_TAG` a rollback.
+- **`/actuator/health` is the only public actuator path**, and it is not proxied by nginx.
+  Never widen the `permitAll` to `/actuator/**`; `RoleBasedAccessControlTest` pins this.
+- Shell scripts, the Jenkinsfile, Dockerfiles and the nginx template must stay LF — see the
+  root `.gitattributes`.
 
 ### AI assistant (`assistant/` package, branch `feature/ai-assistant`)
 
