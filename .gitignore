@@ -3,3 +3,9 @@
 *.iws
 *.iml
 *.ipr
+
+### Docker / CI ###
+# Local overrides for docker-compose.yml - may hold real keys. The template is .env.example.
+.env
+# Test reports copied out of the CI container by ci/backend-tests.sh.
+ci-reports/
